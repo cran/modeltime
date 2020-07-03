@@ -13,13 +13,11 @@ knitr::include_graphics("forecast_plot.jpg")
 knitr::include_graphics("modeltime_workflow.jpg")
 
 ## -----------------------------------------------------------------------------
+library(tidymodels)
 library(modeltime)
 library(tidyverse)
 library(lubridate)
 library(timetk)
-library(parsnip)
-library(rsample)
-library(reactable)
 
 # This toggles plots from plotly (interactive) to ggplot (static)
 interactive <- FALSE
@@ -73,10 +71,19 @@ model_fit_lm <- linear_reg() %>%
 
 ## -----------------------------------------------------------------------------
 # Model 6: earth ----
-model_fit_mars <- mars(mode = "regression") %>%
-    set_engine("earth") %>%
-    fit(value ~ as.numeric(date) + factor(month(date, label = TRUE), ordered = FALSE),
-        data = training(splits))
+model_spec_mars <- mars(mode = "regression") %>%
+    set_engine("earth") 
+
+recipe_spec <- recipe(value ~ date, data = training(splits)) %>%
+    step_date(date, features = "month", ordinal = FALSE) %>%
+    step_mutate(date_num = as.numeric(date)) %>%
+    step_normalize(date_num) %>%
+    step_rm(date)
+  
+wflw_fit_mars <- workflow() %>%
+    add_recipe(recipe_spec) %>%
+    add_model(model_spec_mars) %>%
+    fit(training(splits))
 
 ## ---- paged.print = FALSE-----------------------------------------------------
 models_tbl <- modeltime_table(
@@ -85,7 +92,7 @@ models_tbl <- modeltime_table(
     model_fit_ets,
     model_fit_prophet,
     model_fit_lm,
-    model_fit_mars
+    wflw_fit_mars
 )
 
 models_tbl

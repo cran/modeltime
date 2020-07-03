@@ -1,6 +1,6 @@
 Package: modeltime
 Title: The Tidymodels Extension for Time Series Modeling
-Version: 0.0.1
+Version: 0.0.2
 Authors@R: c(
     person("Matt", "Dancho", email = "mdancho@business-science.io", role = c("aut", "cre")),
     person("Business Science", role = "cph"))
@@ -16,21 +16,21 @@ BugReports: https://github.com/business-science/modeltime/issues
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
-Depends: R (>= 3.3.0)
-Imports: timetk (>= 2.0.0), parsnip (>= 0.1.0), dials, yardstick,
+Depends: R (>= 3.5.0)
+Imports: timetk (>= 2.1.0), parsnip (>= 0.1.2), dials, yardstick,
         workflows, hardhat, rlang (>= 0.1.2), glue, plotly, reactable,
         gt, ggplot2, tibble, tidyr, dplyr, purrr, stringr, forcats,
         scales, janitor, progressr, magrittr, forecast, xgboost,
-        prophet
-Suggests: recipes, rsample, tune, tidyverse, lubridate, testthat,
-        roxygen2, kernlab, earth, randomForest, tidyquant, knitr,
-        rmarkdown
+        prophet, methods
+Suggests: tidymodels, recipes, rsample, tune, tidyverse, lubridate,
+        testthat, roxygen2, kernlab, earth, randomForest, tidyquant,
+        knitr, rmarkdown
 RoxygenNote: 7.1.0
 VignetteBuilder: knitr
 NeedsCompilation: no
-Packaged: 2020-06-14 18:31:09 UTC; mdancho
+Packaged: 2020-07-03 19:41:37 UTC; mdancho
 Author: Matt Dancho [aut, cre],
   Business Science [cph]
 Maintainer: Matt Dancho <mdancho@business-science.io>
 Repository: CRAN
-Date/Publication: 2020-06-22 10:00:03 UTC
+Date/Publication: 2020-07-03 20:10:02 UTC

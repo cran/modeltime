@@ -12,9 +12,9 @@ knitr::opts_chunk$set(
 
 ## ----setup--------------------------------------------------------------------
 library(parsnip)
-library(modeltime)
 library(forecast)
 library(rsample)
+library(modeltime)
 library(tidyverse)
 library(timetk)
 library(rlang)
@@ -108,7 +108,7 @@ bridge_stlm_ets_fit_impl <- function(x, y, period_seasonal_1 = NULL, period_seas
   outcome_msts <- forecast::msts(outcome, seasonal.periods = seasonal.periods)
   
   # 2. Predictors - Handle Dates 
-  index_tbl <- parse_index_from_data(predictors)
+  index_tbl <- modeltime::parse_index_from_data(predictors)
   idx_col   <- names(index_tbl)
   idx       <- timetk::tk_index(index_tbl)
   
@@ -168,7 +168,7 @@ stlm_test <- bridge_stlm_ets_fit_impl(
 
 stlm_test
 
-## -----------------------------------------------------------------------------
+## ---- paged.print = F---------------------------------------------------------
 set_fit(
   model  = "decomposition_reg",
   eng    = "stlm_ets",
@@ -230,34 +230,33 @@ set_pred(
 
 show_model_info("decomposition_reg")
 
-## -----------------------------------------------------------------------------
-fit.decomposition_reg <- function(object, formula, data, control = control_parsnip(), ...) {
-
-    # Needed to preserve date and date time attributes
-    # - Note this approach will change once is implemented:
-    #   https://github.com/tidymodels/parsnip/pull/319.
-    parsnip::fit.model_spec(object, formula, data, control = control_parsnip(), ..., indicators = FALSE)
-
-}
-
 ## ---- eval = F----------------------------------------------------------------
-#  # Don't do this until parsnip (>0.1.1) is released
-#  # set_encoding(
-#  #   model   = "decomposition_reg",
-#  #   eng     = "stlm_ets",
-#  #   mode    = "regression",
-#  #   options = list(predictor_indicators = FALSE)
-#  # )
+#  parsnip::set_encoding(
+#    model   = "decomposition_reg",
+#    eng     = "stlm_ets",
+#    mode    = "regression",
+#    options = list(
+#      predictor_indicators = "none",
+#      compute_intercept = FALSE,
+#      remove_intercept = FALSE
+#    )
+#  )
 
-## ---- paged.print = FALSE-----------------------------------------------------
+## -----------------------------------------------------------------------------
 splits <- initial_time_split(taylor_30_min, prop = 0.9)
 
-model_fit <- decomposition_reg(
-  period_seasonal_1 = 24*2, 
-  period_seasonal_2 = 24*2*7) %>%
-  set_engine("stlm_ets") %>%
-  fit(value ~ date, data = training(splits))
+## ---- paged.print = FALSE, eval=F---------------------------------------------
+#  model_fit <- decomposition_reg(
+#      period_seasonal_1 = 24*2,
+#      period_seasonal_2 = 24*2*7
+#    ) %>%
+#    set_engine("stlm_ets") %>%
+#    fit(value ~ date, data = training(splits))
+#  
+#  model_fit
 
+## ----echo=F-------------------------------------------------------------------
+model_fit <- read_rds("model_fit.rds")
 model_fit
 
 ## ---- paged.print = FALSE-----------------------------------------------------
@@ -267,9 +266,15 @@ calibration_tbl <- model_fit %>%
 
 calibration_tbl
 
+## ----eval=F-------------------------------------------------------------------
+#  refit_tbl <- calibration_tbl %>%
+#    modeltime_refit(data = taylor_30_min)
+
+## ----echo=F-------------------------------------------------------------------
+refit_tbl <- read_rds("refit_tbl.rds")
+
 ## -----------------------------------------------------------------------------
-calibration_tbl %>%
-  modeltime_refit(data = taylor_30_min) %>%
+refit_tbl %>%
   modeltime_forecast(h = "1 week", actual_data = taylor_30_min) %>%
   plot_modeltime_forecast(.interactive = FALSE)
 
