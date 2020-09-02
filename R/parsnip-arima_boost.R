@@ -11,6 +11,7 @@
 #' @inheritParams parsnip::boost_tree
 #' @param mode A single character string for the type of model.
 #'  The only possible value for this model is "regression".
+#' @param sample_size  number for the number (or proportion) of data that is exposed to the fitting routine.
 #' @param seasonal_period A seasonal frequency. Uses "auto" by default.
 #'  A character phrase of "auto" or time-based phrase of "2 weeks"
 #'  can be used if a date or date-time variable is provided.
@@ -297,15 +298,13 @@ print.arima_boost <- function(x, ...) {
 #' @export
 #' @importFrom stats update
 update.arima_boost <- function(object,
-                               parameters = NULL,
-                               seasonal_period = NULL,
+                               parameters = NULL, seasonal_period = NULL,
                                non_seasonal_ar = NULL, non_seasonal_differences = NULL, non_seasonal_ma = NULL,
                                seasonal_ar = NULL, seasonal_differences = NULL, seasonal_ma = NULL,
                                mtry = NULL, trees = NULL, min_n = NULL,
                                tree_depth = NULL, learn_rate = NULL,
                                loss_reduction = NULL,
-                               sample_size = NULL,
-                               stop_iter = NULL,
+                               sample_size = NULL, stop_iter = NULL,
                                fresh = FALSE, ...) {
 
     parsnip::update_dot_check(...)

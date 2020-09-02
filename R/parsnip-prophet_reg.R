@@ -1,3 +1,5 @@
+# PROPHET REG ----
+
 #' General Interface for PROPHET Time Series Models
 #'
 #' `prophet_reg()` is a way to generate a _specification_ of a PROPHET model
@@ -7,7 +9,15 @@
 #' @param mode A single character string for the type of model.
 #'  The only possible value for this model is "regression".
 #' @param growth String 'linear' or 'logistic' to specify a linear or logistic trend.
-#' @param num_changepoints Number of potential changepoints to include for modeling trend.
+#' @param changepoint_num Number of potential changepoints to include for modeling trend.
+#' @param changepoint_range Adjusts the flexibility of the trend component by limiting to a percentage of data
+#'  before the end of the time series. 0.80 means that a changepoint cannot exist after the first 80% of the data.
+#' @param seasonality_yearly One of "auto", TRUE or FALSE. Toggles on/off a seasonal component that
+#'  models year-over-year seasonality.
+#' @param seasonality_weekly One of "auto", TRUE or FALSE. Toggles on/off a seasonal component that
+#'  models week-over-week seasonality.
+#' @param seasonality_daily One of "auto", TRUE or FALSE. Toggles on/off a seasonal componet that
+#'  models day-over-day seasonality.
 #' @param season 'additive' (default) or 'multiplicative'.
 #' @param prior_scale_changepoints Parameter modulating the flexibility of the
 #'  automatic changepoint selection. Large values will allow many changepoints,
@@ -17,6 +27,8 @@
 #'  fluctuations, smaller values dampen the seasonality.
 #' @param prior_scale_holidays Parameter modulating the strength of the holiday components model,
 #'  unless overridden in the holidays input.
+#' @param logistic_cap When growth is logistic, the upper-bound for "saturation".
+#' @param logistic_floor When growth is logistic, the lower-bound for "saturation".
 #'
 #'
 #' @details
@@ -33,8 +45,10 @@
 #'
 #' The main arguments (tuning parameters) for the model are:
 #'
-#'  - `growth`: String 'linear' or 'logistic' to specify a linear or logistic trend.
-#' - `num_changepoints`: Number of potential changepoints to include for modeling trend.
+#' - `growth`: String 'linear' or 'logistic' to specify a linear or logistic trend.
+#' - `changepoint_num`: Number of potential changepoints to include for modeling trend.
+#' - `changepoint_range`: Range changepoints that adjusts how close to the end
+#'    the last changepoint can be located.
 #' - `season`: 'additive' (default) or 'multiplicative'.
 #' - `prior_scale_changepoints`: Parameter modulating the flexibility of the
 #'   automatic changepoint selection. Large values will allow many changepoints,
@@ -44,6 +58,8 @@
 #'  fluctuations, smaller values dampen the seasonality.
 #' - `prior_scale_holidays`: Parameter modulating the strength of the holiday components model,
 #'  unless overridden in the holidays input.
+#' - `logistic_cap`: When growth is logistic, the upper-bound for "saturation".
+#' - `logistic_floor`: When growth is logistic, the lower-bound for "saturation".
 #'
 #' These arguments are converted to their specific names at the
 #'  time that the model is fit.
@@ -64,7 +80,7 @@
 #' tibble::tribble(
 #'     ~ "modeltime", ~ "prophet",
 #'     "growth", "growth",
-#'     "num_changepoints", "n.changepoints",
+#'     "changepoint_num", "n.changepoints",
 #'     "season", "seasonality.mode",
 #'     "prior_scale_changepoints", "changepoint.prior.scale",
 #'     "prior_scale_seasonality", "seasonality.prior.scale",
@@ -92,11 +108,15 @@
 #'  uncertainty intervals are not used as part of the Modeltime Workflow.
 #'  You can override this setting if you plan to use prophet's uncertainty tools.
 #'
+#' Logistic Growth and Saturation Levels:
+#' - For `growth = "logistic"`, simply add numeric values for `logistic_cap` and / or
+#'   `logistic_floor`. There is _no need_ to add additional columns
+#'   for "cap" and "floor" to your data frame.
+#'
 #' Limitations:
 #' - `prophet::add_seasonality()` is not currently implemented. It's used to
 #'  specify non-standard seasonalities using fourier series. An alternative is to use
 #'  `step_fourier()` and supply custom seasonalities as Extra Regressors.
-#'
 #'
 #'
 #' @section Fit Details:
@@ -169,20 +189,28 @@
 #' model_fit
 #'
 #'
-#'
 #' @export
 prophet_reg <- function(mode = "regression",
-                        growth = NULL, num_changepoints = NULL, season = NULL,
-                        prior_scale_changepoints = NULL, prior_scale_seasonality = NULL,
-                        prior_scale_holidays = NULL) {
+                        growth = NULL, changepoint_num = NULL, changepoint_range = NULL,
+                        seasonality_yearly = NULL, seasonality_weekly = NULL, seasonality_daily = NULL, season = NULL,
+                        prior_scale_changepoints = NULL, prior_scale_seasonality = NULL, prior_scale_holidays = NULL,
+                        logistic_cap = NULL, logistic_floor = NULL
+                        ) {
 
     args <- list(
-        growth                  = rlang::enquo(growth),
-        num_changepoints        = rlang::enquo(num_changepoints),
-        season                  = rlang::enquo(season),
-        prior_scale_changepoints = rlang::enquo(prior_scale_changepoints),
-        prior_scale_seasonality = rlang::enquo(prior_scale_seasonality),
-        prior_scale_holidays    = rlang::enquo(prior_scale_holidays)
+        # Prophet
+        growth                    = rlang::enquo(growth),
+        changepoint_num           = rlang::enquo(changepoint_num),
+        changepoint_range         = rlang::enquo(changepoint_range),
+        seasonality_yearly        = rlang::enquo(seasonality_yearly),
+        seasonality_weekly        = rlang::enquo(seasonality_weekly),
+        seasonality_daily         = rlang::enquo(seasonality_daily),
+        season                    = rlang::enquo(season),
+        prior_scale_changepoints  = rlang::enquo(prior_scale_changepoints),
+        prior_scale_seasonality   = rlang::enquo(prior_scale_seasonality),
+        prior_scale_holidays      = rlang::enquo(prior_scale_holidays),
+        logistic_cap              = rlang::enquo(logistic_cap),
+        logistic_floor            = rlang::enquo(logistic_floor)
     )
 
     parsnip::new_model_spec(
@@ -212,9 +240,10 @@ print.prophet_reg <- function(x, ...) {
 #' @export
 #' @importFrom stats update
 update.prophet_reg <- function(object, parameters = NULL,
-                               growth = NULL, num_changepoints = NULL, season = NULL,
-                               prior_scale_changepoints = NULL, prior_scale_seasonality = NULL,
-                               prior_scale_holidays = NULL,
+                               growth = NULL, changepoint_num = NULL, changepoint_range = NULL,
+                               seasonality_yearly = NULL, seasonality_weekly = NULL, seasonality_daily = NULL, season = NULL,
+                               prior_scale_changepoints = NULL, prior_scale_seasonality = NULL, prior_scale_holidays = NULL,
+                               logistic_cap = NULL, logistic_floor = NULL,
                                fresh = FALSE, ...) {
 
     parsnip::update_dot_check(...)
@@ -224,12 +253,19 @@ update.prophet_reg <- function(object, parameters = NULL,
     }
 
     args <- list(
-        growth                  = rlang::enquo(growth),
-        num_changepoints        = rlang::enquo(num_changepoints),
-        season                  = rlang::enquo(season),
-        prior_scale_changepoints = rlang::enquo(prior_scale_changepoints),
-        prior_scale_seasonality = rlang::enquo(prior_scale_seasonality),
-        prior_scale_holidays    = rlang::enquo(prior_scale_holidays)
+        # Prophet
+        growth                    = rlang::enquo(growth),
+        changepoint_num           = rlang::enquo(changepoint_num),
+        changepoint_range         = rlang::enquo(changepoint_range),
+        seasonality_yearly        = rlang::enquo(seasonality_yearly),
+        seasonality_weekly        = rlang::enquo(seasonality_weekly),
+        seasonality_daily         = rlang::enquo(seasonality_daily),
+        season                    = rlang::enquo(season),
+        prior_scale_changepoints  = rlang::enquo(prior_scale_changepoints),
+        prior_scale_seasonality   = rlang::enquo(prior_scale_seasonality),
+        prior_scale_holidays      = rlang::enquo(prior_scale_holidays),
+        logistic_cap              = rlang::enquo(logistic_cap),
+        logistic_floor            = rlang::enquo(logistic_floor)
     )
 
     args <- parsnip::update_main_parameters(args, parameters)
@@ -273,6 +309,7 @@ translate.prophet_reg <- function(x, engine = x$engine, ...) {
 #' Low-Level PROPHET function for translating modeltime to PROPHET
 #'
 #' @inheritParams prophet::prophet
+#' @inheritParams prophet_reg
 #' @param x A dataframe of xreg (exogenous regressors)
 #' @param y A numeric vector of values to fit
 #' @param ... Additional arguments passed to `prophet::prophet`
@@ -281,10 +318,16 @@ translate.prophet_reg <- function(x, engine = x$engine, ...) {
 prophet_fit_impl <- function(x, y,
                              growth = "linear",
                              n.changepoints = 25,
+                             changepoint.range = 0.8,
+                             yearly.seasonality = "auto",
+                             weekly.seasonality = "auto",
+                             daily.seasonality  = "auto",
                              seasonality.mode = "additive",
                              changepoint.prior.scale = 0.05,
                              seasonality.prior.scale = 10,
                              holidays.prior.scale = 10,
+                             logistic_cap = NULL,
+                             logistic_floor = NULL,
                              ...) {
 
     # X & Y
@@ -292,6 +335,8 @@ prophet_fit_impl <- function(x, y,
     # Expect predictor = data.frame
     outcome    <- y
     predictor  <- x
+
+    growth <- tolower(growth)
 
     if (!growth[1] %in% c("linear", "logistic")) {
         message("growth must be 'linear' or 'logistic'. Defaulting to 'linear'.")
@@ -301,6 +346,12 @@ prophet_fit_impl <- function(x, y,
     if (!seasonality.mode[1] %in% c("additive", "multiplicative")) {
         message("seasonality.mode must be 'additive' or 'multiplicative'. Defaulting to 'additive'.")
         seasonality.mode <- 'additive'
+    }
+
+    if (growth == "logistic") {
+        if (all(c(is.null(logistic_cap), is.null(logistic_floor)))) {
+            glubort("Capacities must be supplied for `growth = 'logistic'`. Try specifying at least one of 'logistic_cap' or 'logistic_floor'")
+        }
     }
 
     # INDEX & PERIOD
@@ -328,6 +379,10 @@ prophet_fit_impl <- function(x, y,
     m <- prophet::prophet(
         growth = growth,
         n.changepoints = n.changepoints,
+        changepoint.range = changepoint.range,
+        yearly.seasonality = yearly.seasonality,
+        weekly.seasonality = weekly.seasonality,
+        daily.seasonality = daily.seasonality,
         seasonality.mode = seasonality.mode,
         changepoint.prior.scale = changepoint.prior.scale,
         seasonality.prior.scale = seasonality.prior.scale,
@@ -346,11 +401,17 @@ prophet_fit_impl <- function(x, y,
     # Add seasonalities ??
     # TODO
 
+    # Add logistic cap / floor
+    if (growth == "logistic") {
+        df$cap   <- logistic_cap
+        df$floor <- logistic_floor
+    }
+
     # Fit model
-    m <- prophet::fit.prophet(m, df)
+    m_fit <- prophet::fit.prophet(m, df)
 
     # In-sample Predictions
-    fitted <- stats::predict(m, df) %>% dplyr::pull(yhat)
+    fitted <- stats::predict(m_fit, df) %>% dplyr::pull(yhat)
 
     # Description
     desc <- "PROPHET"
@@ -364,7 +425,7 @@ prophet_fit_impl <- function(x, y,
 
         # Models
         models = list(
-            model_1 = m
+            model_1 = m_fit
         ),
 
         # Data - Date column (matches original), .actual, .fitted, and .residuals columns
@@ -379,7 +440,12 @@ prophet_fit_impl <- function(x, y,
 
         # Preprocessing Recipe (prepped) - Used in predict method
         extras = list(
-            xreg_recipe = xreg_recipe
+            xreg_recipe = xreg_recipe,
+            logistic_params = list(
+                growth         = growth,
+                logistic_cap   = logistic_cap,
+                logistic_floor = logistic_floor
+            )
         ),
 
         # Description - Convert arima model parameters to short description
@@ -393,12 +459,36 @@ print.prophet_fit_impl <- function(x, ...) {
 
     n_xregs <- length(x$models$model_1$extra_regressors)
 
+    prophet_model <- x$models$model_1
+
+    logistic_params <- x$extras$logistic_params
+    if (is.null(logistic_params$logistic_cap)) {
+        cap <- "NULL"
+    } else {
+        cap <- logistic_params$logistic_cap
+    }
+    if (is.null(logistic_params$logistic_floor)) {
+        floor <- "NULL"
+    } else {
+        floor <- logistic_params$logistic_floor
+    }
+
     msg <- stringr::str_glue(
-    "{x$desc} Model
-     - growth: '{x$models$model_1$growth}'
-     - n.changepoints: {x$models$model_1$n.changepoints}
-     - seasonality.mode: '{x$models$model_1$seasonality.mode}'
-     - extra_regressors: {n_xregs}")
+        "{x$desc} Model
+         - growth: '{prophet_model$growth}'
+         - n.changepoints: {prophet_model$n.changepoints}
+         - changepoint.range: {prophet_model$changepoint.range}
+         - yearly.seasonality: '{prophet_model$yearly.seasonality}'
+         - weekly.seasonality: '{prophet_model$weekly.seasonality}'
+         - daily.seasonality: '{prophet_model$daily.seasonality}'
+         - seasonality.mode: '{prophet_model$seasonality.mode}'
+         - changepoint.prior.scale: {prophet_model$changepoint.prior.scale}
+         - seasonality.prior.scale: {prophet_model$seasonality.prior.scale}
+         - holidays.prior.scale: {prophet_model$holidays.prior.scale}
+         - logistic_cap: {cap}
+         - logistic_floor: {floor}
+         - extra_regressors: {n_xregs}
+         ")
 
     print(msg)
     invisible(x)
@@ -421,9 +511,10 @@ predict.prophet_fit_impl <- function(object, new_data, ...) {
 prophet_predict_impl <- function(object, new_data, ...) {
 
     # PREPARE INPUTS
-    model       <- object$models$model_1
-    idx_future  <- new_data %>% timetk::tk_index()
-    xreg_recipe <- object$extras$xreg_recipe
+    model           <- object$models$model_1
+    idx_future      <- new_data %>% timetk::tk_index()
+    xreg_recipe     <- object$extras$xreg_recipe
+    logistic_params <- object$extras$logistic_params
 
     # XREG
     n_xregs  <- length(object$models$model_1$extra_regressors)
@@ -439,6 +530,11 @@ prophet_predict_impl <- function(object, new_data, ...) {
         df <- df %>%
             dplyr::bind_cols(xreg_tbl)
     }
+    if (logistic_params$growth == "logistic") {
+        df$cap   <- logistic_params$logistic_cap
+        df$floor <- logistic_params$logistic_floor
+    }
+
 
     # PREDICTIONS
     preds_forecast <- stats::predict(model, df)

@@ -3,7 +3,7 @@
 
 # modeltime
 
-<img src="vignettes/logo-modeltime.png" width="147" height="170" align="right" />
+<!-- <img src="vignettes/logo-modeltime.png" width="147" height="170" align="right" /> -->
 
 [![Travis build
 status](https://travis-ci.org/business-science/modeltime.svg?branch=master)](https://travis-ci.org/business-science/modeltime)
@@ -17,8 +17,6 @@ The time series forecasting package for the `tidymodels` ecosystem.
 ## Features & Benefits
 
 #### Modeltime unlocks time series models and machine learning in one framework
-
-<img src="vignettes/forecast_plot.jpg" width="100%" style="display: block; margin: auto;" />
 
 No need to switch back and forth between various frameworks. `modeltime`
 unlocks machine learning & classical time series analysis.
@@ -38,25 +36,7 @@ for using best practices to forecast.
 
 <hr>
 
-<div class="figure" style="text-align: center">
-
-<img src="vignettes/modeltime_workflow.jpg" alt="A streamlined workflow for forecasting" width="100%" />
-
-<p class="caption">
-
-A streamlined workflow for forecasting
-
-</p>
-
-</div>
-
 <hr>
-
-#### Interactive plotting by default
-
-All plots incorporate both `plotly` (interactive) and `ggplot2` (static)
-visualizations. This means you can quickly add forecasts to `shiny`
-apps, `rmarkdown` documents, and more.
 
 ## Tutorials
 

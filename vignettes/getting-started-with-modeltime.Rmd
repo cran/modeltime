@@ -1,6 +1,11 @@
 ---
 title: "Getting Started with Modeltime"
 output: rmarkdown::html_vignette
+resource_files:
+  - articles/logo-modeltime.png
+  - articles/forecast_plot.jpg
+  - articles/modeltime_workflow.jpg
+  - articles/time_series_course.jpg
 vignette: >
   %\VignetteIndexEntry{Getting Started with Modeltime}
   %\VignetteEngine{knitr::rmarkdown}
@@ -11,6 +16,11 @@ vignette: >
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
+  # out.width='100%',
+  fig.align = "center",
+  fig.width = 7,
+  fig.height = 5,
+  
   message = FALSE,
   warning = FALSE
 )
@@ -74,7 +84,7 @@ m750 <- m4_monthly %>% filter(id == "M750")
 
 We can visualize the dataset. 
 
-```{r, out.width='100%'}
+```{r}
 m750 %>%
   plot_time_series(date, value, .interactive = interactive)
 ```
@@ -108,7 +118,7 @@ _Parsnip models_ (e.g. `linear_reg()`) typically should not have date features, 
 
 First, we create a basic univariate ARIMA model using "Auto Arima" using `arima_reg()`
 
-```{r}
+```{r, message=TRUE}
 # Model 1: auto_arima ----
 model_fit_arima_no_boost <- arima_reg() %>%
     set_engine(engine = "auto_arima") %>%
@@ -123,7 +133,7 @@ Next, we create a boosted ARIMA using `arima_boost()`. Boosting uses XGBoost to 
  
 Normally I'd use a preprocessing workflow for the month features using a function like `step_timeseries_signature()` from `timetk` to help reduce the complexity of the parsnip formula interface. 
 
-```{r}
+```{r, message=TRUE}
 # Model 2: arima_boost ----
 model_fit_arima_boosted <- arima_boost(
     min_n = 2,
@@ -139,7 +149,7 @@ model_fit_arima_boosted <- arima_boost(
 
 Next, create an Error-Trend-Season (ETS) model using an Exponential Smoothing State Space model. This is accomplished with `exp_smoothing()`.
 
-```{r}
+```{r, message=TRUE}
 # Model 3: ets ----
 model_fit_ets <- exp_smoothing() %>%
     set_engine(engine = "ets") %>%
@@ -150,7 +160,7 @@ model_fit_ets <- exp_smoothing() %>%
 
 We'll create a `prophet` model using `prophet_reg()`.
 
-```{r}
+```{r, message=TRUE}
 # Model 4: prophet ----
 model_fit_prophet <- prophet_reg() %>%
     set_engine(engine = "prophet") %>%
@@ -164,7 +174,7 @@ We can model time series linear regression (TSLM) using the `linear_reg()` algor
 - _Trend:_ Modeled using `as.numeric(date)`
 - _Seasonal:_ Modeled using `month(date)`
 
-```{r}
+```{r, message=TRUE}
 # Model 5: lm ----
 model_fit_lm <- linear_reg() %>%
     set_engine("lm") %>%
@@ -176,7 +186,7 @@ model_fit_lm <- linear_reg() %>%
 
 We can model a Multivariate Adaptive Regression Spline model using `mars()`. I've modified the process to use a `workflow` to standardize the preprocessing of the features that are provided to the machine learning model (mars). 
 
-```{r}
+```{r, message=TRUE}
 # Model 6: earth ----
 model_spec_mars <- mars(mode = "regression") %>%
     set_engine("earth") 
@@ -244,7 +254,7 @@ There are 2 critical parts to an evaluation.
 
 Visualizing the Test Error is easy to do using the __interactive plotly visualization (just toggle the visibility of the models using the Legend).__ 
 
-```{r, out.width='100%'}
+```{r}
 calibration_tbl %>%
     modeltime_forecast(
         new_data    = testing(splits),
@@ -275,14 +285,16 @@ We can use `modeltime_accuracy()` to collect common accuracy metrics. The defaul
 - __RMSE__ - Root mean squared error, `rmse()`
 - __RSQ__ - R-squared, `rsq()`
 
-These of course can be customized following the rules for creating new yardstick metrics, but the defaults are very useful. 
+These of course can be customized following the rules for creating new yardstick metrics, but the defaults are very useful. Refer to `default_forecast_accuracy_metrics()` to learn more.
 
 To make table-creation a bit easier, I've included `table_modeltime_accuracy()` for outputing results in either interactive (`reactable`) or static (`gt`) tables. 
 
-```{r, out.width='100%'}
+```{r}
 calibration_tbl %>%
     modeltime_accuracy() %>%
-    table_modeltime_accuracy(resizable = TRUE, bordered = TRUE)
+    table_modeltime_accuracy(
+        .interactive = interactive
+    )
 ```
 
 From the accuracy metrics:
@@ -294,7 +306,7 @@ From the accuracy metrics:
 
 The final step is to refit the models to the full dataset using `modeltime_refit()` and forecast them forward. 
 
-```{r, out.width='100%', paged.print = F, message=F}
+```{r, paged.print = F, message=F}
 refit_tbl <- calibration_tbl %>%
     modeltime_refit(data = m750)
 
@@ -343,7 +355,7 @@ There's a lot more to learn...
 
 I teach `modeltime` in my __Time Series Analysis & Forecasting Course__. If interested in learning Pro-Forecasting Strategies then [join my waitlist](https://mailchi.mp/business-science/time-series-forecasting-course-coming-soon). The course is coming soon. 
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, out.width="100%"}
 knitr::include_graphics("time_series_course.jpg")
 ```
 

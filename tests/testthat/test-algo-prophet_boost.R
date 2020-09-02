@@ -13,7 +13,11 @@ splits <- initial_time_split(m750, prop = 0.8)
 # Model Spec
 model_spec <- prophet_boost(
     growth                   = 'linear',
-    num_changepoints         = 10,
+    changepoint_num          = 10,
+    changepoint_range        = 0.75,
+    seasonality_yearly       = TRUE,
+    seasonality_weekly       = FALSE,
+    seasonality_daily        = FALSE,
     season                   = 'multiplicative',
     prior_scale_changepoints = 20,
     prior_scale_seasonality  = 20,
@@ -60,6 +64,12 @@ test_that("prophet_boost: No Xregs", {
 
     testthat::expect_identical(model_fit$fit$models$model_1$growth, "linear")
     testthat::expect_identical(model_fit$fit$models$model_1$n.changepoints, 10)
+
+    testthat::expect_identical(model_fit$fit$models$model_1$changepoint.range, 0.75)
+    testthat::expect_identical(model_fit$fit$models$model_1$yearly.seasonality, TRUE)
+    testthat::expect_identical(model_fit$fit$models$model_1$weekly.seasonality, FALSE)
+    testthat::expect_identical(model_fit$fit$models$model_1$daily.seasonality, FALSE)
+
     testthat::expect_identical(model_fit$fit$models$model_1$seasonality.mode, 'multiplicative')
     testthat::expect_identical(model_fit$fit$models$model_1$seasonality.prior.scale, 20)
     testthat::expect_identical(model_fit$fit$models$model_1$changepoint.prior.scale, 20)
@@ -124,6 +134,12 @@ test_that("prophet_boost: prophet, XREGS", {
 
     testthat::expect_identical(model_fit$fit$models$model_1$growth, "linear")
     testthat::expect_identical(model_fit$fit$models$model_1$n.changepoints, 10)
+
+    testthat::expect_identical(model_fit$fit$models$model_1$changepoint.range, 0.75)
+    testthat::expect_identical(model_fit$fit$models$model_1$yearly.seasonality, TRUE)
+    testthat::expect_identical(model_fit$fit$models$model_1$weekly.seasonality, FALSE)
+    testthat::expect_identical(model_fit$fit$models$model_1$daily.seasonality, FALSE)
+
     testthat::expect_identical(model_fit$fit$models$model_1$seasonality.mode, 'multiplicative')
     testthat::expect_identical(model_fit$fit$models$model_1$seasonality.prior.scale, 20)
     testthat::expect_identical(model_fit$fit$models$model_1$changepoint.prior.scale, 20)
@@ -221,6 +237,12 @@ test_that("prophet_boost: prophet_xgboost (workflow)", {
 
     testthat::expect_identical(wflw_fit$fit$fit$fit$models$model_1$growth, "linear")
     testthat::expect_identical(wflw_fit$fit$fit$fit$models$model_1$n.changepoints, 10)
+
+    testthat::expect_identical(wflw_fit$fit$fit$fit$models$model_1$changepoint.range, 0.75)
+    testthat::expect_identical(wflw_fit$fit$fit$fit$models$model_1$yearly.seasonality, TRUE)
+    testthat::expect_identical(wflw_fit$fit$fit$fit$models$model_1$weekly.seasonality, FALSE)
+    testthat::expect_identical(wflw_fit$fit$fit$fit$models$model_1$daily.seasonality, FALSE)
+
     testthat::expect_identical(wflw_fit$fit$fit$fit$models$model_1$seasonality.mode, 'multiplicative')
     testthat::expect_identical(wflw_fit$fit$fit$fit$models$model_1$seasonality.prior.scale, 20)
     testthat::expect_identical(wflw_fit$fit$fit$fit$models$model_1$changepoint.prior.scale, 20)
@@ -278,6 +300,85 @@ test_that("prophet_boost: prophet_xgboost (workflow)", {
     testthat::expect_lte(mean(abs(resid)), 700)
 
 })
+
+# LOGISTIC GROWTH ----
+
+# * MODELS ----
+
+test_that("prophet_reg: prophet, Logistic Growth", {
+
+
+    # ** MODEL FIT ----
+
+    # Model Fit
+    model_fit <- prophet_boost(
+        growth = "logistic",
+        logistic_cap = 11000,
+        seasonality_yearly = FALSE,
+        seasonality_weekly = FALSE,
+        seasonality_daily  = FALSE
+    ) %>%
+        set_engine(engine = "prophet_xgboost") %>%
+        fit(value ~ date
+            + as.numeric(date)
+            + month(date, label = TRUE)
+            + fourier_vec(date, period = 12),
+            data = m750)
+
+    # Structure
+
+    testthat::expect_s3_class(model_fit$fit, "prophet_xgboost_fit_impl")
+
+    testthat::expect_s3_class(model_fit$fit$data, "tbl_df")
+
+    testthat::expect_equal(names(model_fit$fit$data)[1], "date")
+
+    testthat::expect_false(is.null(model_fit$fit$extras$logistic_params$logistic_cap))
+
+    # $fit PROPHET
+
+    testthat::expect_s3_class(model_fit$fit$models$model_1, "prophet")
+
+    testthat::expect_identical(model_fit$fit$models$model_1$growth, "logistic")
+
+    testthat::expect_identical(model_fit$fit$extras$logistic_params$growth, "logistic")
+    testthat::expect_identical(model_fit$fit$extras$logistic_params$logistic_cap, 11000)
+    testthat::expect_true(is.null(model_fit$fit$extras$logistic_params$logistic_floor))
+
+    # $preproc
+
+    testthat::expect_equal(model_fit$preproc$y_var, "value")
+
+
+    # ** PREDICTIONS ----
+    forecast_prophet_logisitic <- modeltime_table(
+        model_fit
+    ) %>%
+        modeltime_forecast(
+            h = 12 * 10,
+            actual_data = m750
+        ) %>%
+        filter(.model_desc != "ACTUAL")
+
+    expect_lte(
+        forecast_prophet_logisitic$.value %>% max(),
+        11500
+    )
+
+    # ERROR IF CAP/FLOOR NOT SPECIFIED
+
+    expect_error({
+        prophet_boost(
+            growth = "logistic"
+        ) %>%
+            set_engine(engine = "prophet_xgboost") %>%
+            fit(value ~ date, m750)
+    })
+
+})
+
+
+
 
 
 

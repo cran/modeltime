@@ -1,3 +1,8 @@
+# IMPORTS ----
+# StanHeaders - Used to prevent issues with Prophet dynload error
+
+#' @import StanHeaders
+
 
 # ON LOAD ----
 
@@ -19,6 +24,9 @@
     # Exponential Smoothing
     make_exp_smoothing()
 
-    # Seasonal Decomposition
-    make_seasonal_decomp()
+    # TBATS & SEASONAL DECOMP
+    make_seasonal_reg()
+
+    # NNETAR
+    make_nnetar_reg()
 }

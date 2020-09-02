@@ -7,11 +7,17 @@
 prophet_reg(
   mode = "regression",
   growth = NULL,
-  num_changepoints = NULL,
+  changepoint_num = NULL,
+  changepoint_range = NULL,
+  seasonality_yearly = NULL,
+  seasonality_weekly = NULL,
+  seasonality_daily = NULL,
   season = NULL,
   prior_scale_changepoints = NULL,
   prior_scale_seasonality = NULL,
-  prior_scale_holidays = NULL
+  prior_scale_holidays = NULL,
+  logistic_cap = NULL,
+  logistic_floor = NULL
 )
 }
 \arguments{
@@ -20,7 +26,19 @@ The only possible value for this model is "regression".}
 
 \item{growth}{String 'linear' or 'logistic' to specify a linear or logistic trend.}
 
-\item{num_changepoints}{Number of potential changepoints to include for modeling trend.}
+\item{changepoint_num}{Number of potential changepoints to include for modeling trend.}
+
+\item{changepoint_range}{Adjusts the flexibility of the trend component by limiting to a percentage of data
+before the end of the time series. 0.80 means that a changepoint cannot exist after the first 80\% of the data.}
+
+\item{seasonality_yearly}{One of "auto", TRUE or FALSE. Toggles on/off a seasonal component that
+models year-over-year seasonality.}
+
+\item{seasonality_weekly}{One of "auto", TRUE or FALSE. Toggles on/off a seasonal component that
+models week-over-week seasonality.}
+
+\item{seasonality_daily}{One of "auto", TRUE or FALSE. Toggles on/off a seasonal componet that
+models day-over-day seasonality.}
 
 \item{season}{'additive' (default) or 'multiplicative'.}
 
@@ -34,6 +52,10 @@ fluctuations, smaller values dampen the seasonality.}
 
 \item{prior_scale_holidays}{Parameter modulating the strength of the holiday components model,
 unless overridden in the holidays input.}
+
+\item{logistic_cap}{When growth is logistic, the upper-bound for "saturation".}
+
+\item{logistic_floor}{When growth is logistic, the lower-bound for "saturation".}
 }
 \description{
 \code{prophet_reg()} is a way to generate a \emph{specification} of a PROPHET model
@@ -56,7 +78,9 @@ following \emph{engines}:
 The main arguments (tuning parameters) for the model are:
 \itemize{
 \item \code{growth}: String 'linear' or 'logistic' to specify a linear or logistic trend.
-\item \code{num_changepoints}: Number of potential changepoints to include for modeling trend.
+\item \code{changepoint_num}: Number of potential changepoints to include for modeling trend.
+\item \code{changepoint_range}: Range changepoints that adjusts how close to the end
+the last changepoint can be located.
 \item \code{season}: 'additive' (default) or 'multiplicative'.
 \item \code{prior_scale_changepoints}: Parameter modulating the flexibility of the
 automatic changepoint selection. Large values will allow many changepoints,
@@ -66,6 +90,8 @@ seasonality model. Larger values allow the model to fit larger seasonal
 fluctuations, smaller values dampen the seasonality.
 \item \code{prior_scale_holidays}: Parameter modulating the strength of the holiday components model,
 unless overridden in the holidays input.
+\item \code{logistic_cap}: When growth is logistic, the upper-bound for "saturation".
+\item \code{logistic_floor}: When growth is logistic, the lower-bound for "saturation".
 }
 
 These arguments are converted to their specific names at the
@@ -84,7 +110,7 @@ The standardized parameter names in \code{modeltime} can be mapped to their orig
 names in each engine:\tabular{ll}{
    modeltime \tab prophet \cr
    growth \tab growth \cr
-   num_changepoints \tab n.changepoints \cr
+   changepoint_num \tab n.changepoints \cr
    season \tab seasonality.mode \cr
    prior_scale_changepoints \tab changepoint.prior.scale \cr
    prior_scale_seasonality \tab seasonality.prior.scale \cr
@@ -103,7 +129,9 @@ Function Parameters:\preformatted{## function (df = NULL, growth = "linear", cha
 ##     daily.seasonality = "auto", holidays = NULL, seasonality.mode = "additive", 
 ##     seasonality.prior.scale = 10, holidays.prior.scale = 10, changepoint.prior.scale = 0.05, 
 ##     mcmc.samples = 0, interval.width = 0.8, uncertainty.samples = 1000, 
-##     fit = TRUE, ...)
+##     fit = TRUE, ...)  
+##  - attr(*, "srcref")= 'srcref' int [1:8] 84 12 147 1 12 1 1206 1269
+##   ..- attr(*, "srcfile")=Classes 'srcfilealias', 'srcfile' <environment: 0x7fa015679e90>
 }
 
 Parameter Notes:
@@ -114,6 +142,13 @@ Parameter Notes:
 \item \code{uncertainty.samples}: The default is set to 0 because the prophet
 uncertainty intervals are not used as part of the Modeltime Workflow.
 You can override this setting if you plan to use prophet's uncertainty tools.
+}
+
+Logistic Growth and Saturation Levels:
+\itemize{
+\item For \code{growth = "logistic"}, simply add numeric values for \code{logistic_cap} and / or
+\code{logistic_floor}. There is \emph{no need} to add additional columns
+for "cap" and "floor" to your data frame.
 }
 
 Limitations:
@@ -194,7 +229,6 @@ model_spec <- prophet_reg() \%>\%
 model_fit <- model_spec \%>\%
     fit(log(value) ~ date, data = training(splits))
 model_fit
-
 
 
 }

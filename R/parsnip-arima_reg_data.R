@@ -3,7 +3,7 @@
 # they are already in the parsnip model database. We'll exclude them from
 # coverage stats for this reason.
 
-# nocov
+# nocov start
 
 
 make_arima_reg <- function() {
@@ -16,6 +16,7 @@ make_arima_reg <- function() {
     # * Model ----
     parsnip::set_model_engine("arima_reg", mode = "regression", eng = "arima")
     parsnip::set_dependency("arima_reg", "arima", "forecast")
+    parsnip::set_dependency("arima_reg", "arima", "modeltime")
 
     # * Args ----
     parsnip::set_model_arg(
@@ -129,6 +130,7 @@ make_arima_reg <- function() {
     # * Model ----
     parsnip::set_model_engine("arima_reg", mode = "regression", eng = "auto_arima")
     parsnip::set_dependency("arima_reg", "auto_arima", "forecast")
+    parsnip::set_dependency("arima_reg", "auto_arima", "modeltime")
 
     # * Args ----
     parsnip::set_model_arg(

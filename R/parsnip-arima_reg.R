@@ -28,7 +28,7 @@
 #'  following _engines_:
 #'
 #'  - "auto_arima" (default) - Connects to [forecast::auto.arima()]
-#'  - "Arima" - Connects to [forecast::Arima()]
+#'  - "arima" - Connects to [forecast::Arima()]
 #'
 #' __Main Arguments__
 #'
@@ -324,7 +324,9 @@ translate.arima_reg <- function(x, engine = x$engine, ...) {
 #' @param ... Additional arguments passed to `forecast::Arima`
 #'
 #' @export
-Arima_fit_impl <- function(x, y, period = "auto", p = 0, d = 0, q = 0, P = 0, D = 0, Q = 0, ...) {
+Arima_fit_impl <- function(x, y, period = "auto",
+                           p = 0, d = 0, q = 0, P = 0, D = 0, Q = 0,
+                           ...) {
 
     # X & Y
     # Expect outcomes  = vector

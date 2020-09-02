@@ -1,3 +1,5 @@
+# MODELTIME CALIBRATE ----
+
 #' Preparation for forecasting
 #'
 #' Calibration sets the stage for accuracy and forecast confidence
@@ -100,6 +102,55 @@ modeltime_calibrate.default <- function(object, new_data,
 }
 
 #' @export
+modeltime_calibrate.mdl_time_tbl <- function(object, new_data,
+                                             quiet = TRUE, ...) {
+    data <- object
+
+    # If object has already been calibrated, remove calibration
+    if (is_calibrated(data)) {
+        data <- data %>%
+            dplyr::select(-.type, -.calibration_data)
+    }
+
+    safe_calc_residuals <- purrr::safely(calc_residuals, otherwise = NA, quiet = quiet)
+
+    ret <- data %>%
+        dplyr::ungroup() %>%
+        dplyr::mutate(.nested.col = purrr::map(
+            .x         = .model,
+            .f         = function(obj) {
+                ret <- safe_calc_residuals(
+                    obj,
+                    test_data = new_data
+                )
+
+                ret <- ret %>% purrr::pluck("result")
+
+                return(ret)
+            })
+        ) %>%
+        # dplyr::select(-.model) %>%
+        tidyr::unnest(cols = .nested.col)
+
+    if (".nested.col" %in% names(ret)) {
+        ret <- ret %>%
+            dplyr::select(-.nested.col)
+    }
+
+    # Handle NULL .calibration_data - happens when NA values are present
+    ret <- ret %>%
+        dplyr::mutate(.is_null = purrr::map_lgl(.calibration_data, is.null)) %>%
+        dplyr::mutate(.calibration_data = ifelse(.is_null, list(NA), .calibration_data)) %>%
+        dplyr::select(-.is_null)
+
+    if (!"mdl_time_tbl" %in% class(ret)) {
+        class(ret) <- c("mdl_time_tbl", class(ret))
+    }
+
+    return(ret)
+}
+
+#' @export
 modeltime_calibrate.model_spec <- function(object, new_data,
                                            quiet = TRUE, ...) {
     rlang::abort("Model spec must be trained using the 'fit()' function.")
@@ -136,46 +187,35 @@ modeltime_calibrate.workflow <- function(object, new_data,
 
 }
 
-#' @export
-modeltime_calibrate.mdl_time_tbl <- function(object, new_data,
-                                             quiet = TRUE, ...) {
-    data <- object
-
-    safe_calc_residuals <- purrr::safely(calc_residuals, otherwise = NA, quiet = quiet)
-
-    ret <- data %>%
-        dplyr::ungroup() %>%
-        dplyr::mutate(.nested.col = purrr::map(
-            .x         = .model,
-            .f         = function(obj) {
-                ret <- safe_calc_residuals(
-                    obj,
-                    test_data = new_data
-                )
-
-                ret <- ret %>% purrr::pluck("result")
-
-                return(ret)
-            })
-        ) %>%
-        # dplyr::select(-.model) %>%
-        tidyr::unnest(cols = .nested.col)
-
-    if (".nested.col" %in% names(ret)) {
-        ret <- ret %>%
-            dplyr::select(-.nested.col)
-    }
-
-    if (!"mdl_time_tbl" %in% class(ret)) {
-        class(ret) <- c("mdl_time_tbl", class(ret))
-    }
-
-    return(ret)
-}
-
 
 
 # UTILITIES ----
+
+mdl_time_forecast_to_residuals <- function(forecast_data, test_data, idx_var_text) {
+
+    predictions_tbl <- forecast_data %>%
+        tidyr::pivot_wider(names_from = .key, values_from = .value) %>%
+        tidyr::drop_na()
+
+    # Return Residuals
+    tibble::tibble(
+        !!idx_var_text   := test_data %>% timetk::tk_index(),
+        .actual           = predictions_tbl$actual,
+        .prediction       = predictions_tbl$prediction,
+        .residuals        = predictions_tbl$actual - predictions_tbl$prediction
+    )
+
+}
+
+mdl_time_residuals_to_calibration <- function(residuals_data, .type = "Test") {
+
+    # Return nested calibration tbl
+    tibble::tibble(
+        .type = .type,
+        .calibration_data = list(residuals_data)
+    )
+
+}
 
 calc_residuals <- function(object, test_data = NULL, ...) {
 
@@ -186,36 +226,62 @@ calc_residuals <- function(object, test_data = NULL, ...) {
 
     # Testing Metrics
     test_metrics_tbl <- tibble::tibble()
+
+    # CALIBRATION -----
     if (!is.null(test_data)) {
 
-        predictions_tbl <- object %>%
-            mdl_time_forecast(
-                new_data      = test_data,
-                actual_data   = test_data,
-                conf_interval = NULL,
-                ...
-            )
-
-        test_metrics_prepped_tbl <- predictions_tbl %>%
-            tidyr::pivot_wider(names_from = .key, values_from = .value) %>%
-            tidyr::drop_na() %>%
-            tibble::add_column(.type = "Test", .before = 1) %>%
-            dplyr::group_by(.type)
-
         idx_var_text <- timetk::tk_get_timeseries_variables(test_data)[1]
-        test_metrics_tbl <- test_metrics_prepped_tbl %>%
-            dplyr::summarize(.calibration_data = list(
-                    tibble::tibble(
-                        !!idx_var_text   := test_data %>% timetk::tk_index(),
-                        .actual           = actual,
-                        .prediction       = prediction,
-                        .residuals        = actual - prediction
-                    )
-                )
-            ) %>%
-            dplyr::ungroup()
+
+        # print(is_modeltime_model(object))
+        if (is_modeltime_model(object)) {
+            # Is Modeltime Object
+
+            residual_tbl <- pull_modeltime_residuals(object) %>%
+                dplyr::rename(.prediction = .fitted)
+
+            idx_resid <- timetk::tk_index(residual_tbl)
+            idx_test  <- timetk::tk_index(test_data)
+
+            # print(identical(idx_resid, idx_test))
+            if (all(idx_test %in% idx_resid)) {
+                # Can use Stored Residuals
+                test_metrics_tbl <- residual_tbl %>%
+                    dplyr::filter(!! sym(idx_var_text) %in% idx_test) %>%
+                    mdl_time_residuals_to_calibration(.type = "Fitted")
+            } else {
+                # Cannot use Stored Residuals
+                test_metrics_tbl <- object %>%
+                    mdl_time_forecast(
+                        new_data      = test_data,
+                        actual_data   = test_data,
+                        conf_interval = NULL,
+                        ...
+                    ) %>%
+                    mdl_time_forecast_to_residuals(
+                        test_data    = test_data,
+                        idx_var_text = idx_var_text
+                    ) %>%
+                    mdl_time_residuals_to_calibration(.type = "Test")
+            }
+        } else {
+            # Not modeltime object
+            test_metrics_tbl <- object %>%
+                mdl_time_forecast(
+                    new_data      = test_data,
+                    actual_data   = test_data,
+                    conf_interval = NULL,
+                    ...
+                ) %>%
+                mdl_time_forecast_to_residuals(
+                    test_data    = test_data,
+                    idx_var_text = idx_var_text
+                ) %>%
+                mdl_time_residuals_to_calibration(.type = "Test")
+        }
 
     }
+
+    # print(test_metrics_tbl)
 
     metrics_tbl <- dplyr::bind_rows(train_metrics_tbl, test_metrics_tbl)
 

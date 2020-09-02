@@ -2,6 +2,11 @@
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
+  # out.width='100%',
+  fig.align = "center",
+  fig.width = 7,
+  fig.height = 5,
+  
   message = FALSE,
   warning = FALSE
 )
@@ -26,7 +31,7 @@ interactive <- FALSE
 # Data
 m750 <- m4_monthly %>% filter(id == "M750")
 
-## ---- out.width='100%'--------------------------------------------------------
+## -----------------------------------------------------------------------------
 m750 %>%
   plot_time_series(date, value, .interactive = interactive)
 
@@ -34,13 +39,13 @@ m750 %>%
 # Split Data 80/20
 splits <- initial_time_split(m750, prop = 0.9)
 
-## -----------------------------------------------------------------------------
+## ---- message=TRUE------------------------------------------------------------
 # Model 1: auto_arima ----
 model_fit_arima_no_boost <- arima_reg() %>%
     set_engine(engine = "auto_arima") %>%
     fit(value ~ date, data = training(splits))
 
-## -----------------------------------------------------------------------------
+## ---- message=TRUE------------------------------------------------------------
 # Model 2: arima_boost ----
 model_fit_arima_boosted <- arima_boost(
     min_n = 2,
@@ -50,26 +55,26 @@ model_fit_arima_boosted <- arima_boost(
     fit(value ~ date + as.numeric(date) + factor(month(date, label = TRUE), ordered = F),
         data = training(splits))
 
-## -----------------------------------------------------------------------------
+## ---- message=TRUE------------------------------------------------------------
 # Model 3: ets ----
 model_fit_ets <- exp_smoothing() %>%
     set_engine(engine = "ets") %>%
     fit(value ~ date, data = training(splits))
 
-## -----------------------------------------------------------------------------
+## ---- message=TRUE------------------------------------------------------------
 # Model 4: prophet ----
 model_fit_prophet <- prophet_reg() %>%
     set_engine(engine = "prophet") %>%
     fit(value ~ date, data = training(splits))
 
-## -----------------------------------------------------------------------------
+## ---- message=TRUE------------------------------------------------------------
 # Model 5: lm ----
 model_fit_lm <- linear_reg() %>%
     set_engine("lm") %>%
     fit(value ~ as.numeric(date) + factor(month(date, label = TRUE), ordered = FALSE),
         data = training(splits))
 
-## -----------------------------------------------------------------------------
+## ---- message=TRUE------------------------------------------------------------
 # Model 6: earth ----
 model_spec_mars <- mars(mode = "regression") %>%
     set_engine("earth") 
@@ -103,7 +108,7 @@ calibration_tbl <- models_tbl %>%
 
 calibration_tbl
 
-## ---- out.width='100%'--------------------------------------------------------
+## -----------------------------------------------------------------------------
 calibration_tbl %>%
     modeltime_forecast(
         new_data    = testing(splits),
@@ -114,12 +119,14 @@ calibration_tbl %>%
       .interactive      = interactive
     )
 
-## ---- out.width='100%'--------------------------------------------------------
+## -----------------------------------------------------------------------------
 calibration_tbl %>%
     modeltime_accuracy() %>%
-    table_modeltime_accuracy(resizable = TRUE, bordered = TRUE)
+    table_modeltime_accuracy(
+        .interactive = interactive
+    )
 
-## ---- out.width='100%', paged.print = F, message=F----------------------------
+## ---- paged.print = F, message=F----------------------------------------------
 refit_tbl <- calibration_tbl %>%
     modeltime_refit(data = m750)
 
@@ -130,6 +137,6 @@ refit_tbl %>%
       .interactive      = interactive
     )
 
-## ---- echo=FALSE--------------------------------------------------------------
+## ---- echo=FALSE, out.width="100%"--------------------------------------------
 knitr::include_graphics("time_series_course.jpg")
 

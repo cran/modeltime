@@ -59,6 +59,7 @@ plot_modeltime_forecast <- function(.data,
                                     .conf_interval_show = TRUE,
                                     .conf_interval_fill = "grey20",
                                     .conf_interval_alpha = 0.20,
+                                    .smooth = FALSE,
                                     .legend_show = TRUE,
                                     .legend_max_width = 40,
                                     .title = "Forecast Plot", .x_lab = "", .y_lab = "",
@@ -88,6 +89,7 @@ plot_modeltime_forecast <- function(.data,
         .conf_interval_show    = .conf_interval_show,
         .conf_interval_fill    = .conf_interval_fill,
         .conf_interval_alpha   = .conf_interval_alpha,
+        .smooth                = .smooth,
         .legend_show           = .legend_show,
         .legend_max_width      = .legend_max_width,
         .title                 = .title,
@@ -128,6 +130,7 @@ plot_modeltime_forecast_multi <- function(.data,
                                           .conf_interval_show = TRUE,
                                           .conf_interval_fill = "grey20",
                                           .conf_interval_alpha = 0.20,
+                                          .smooth = FALSE,
                                           .legend_show = TRUE,
                                           .legend_max_width = 40,
                                           .title = "Forecast Plot", .x_lab = "", .y_lab = "",
@@ -151,7 +154,7 @@ plot_modeltime_forecast_multi <- function(.data,
         .value        = .value,
         .color_var    = .model_desc,
 
-        .smooth       = FALSE,
+        .smooth       = .smooth,
 
         .title        = .title,
         .x_lab        = .x_lab,
@@ -166,11 +169,17 @@ plot_modeltime_forecast_multi <- function(.data,
 
         # Add ribbon
         g <- g +
-            ggplot2::geom_ribbon(ggplot2::aes(ymin = .conf_lo, ymax = .conf_hi, color = .model_desc),
-                                 fill = .conf_interval_fill,
-                                 alpha = .conf_interval_alpha,
-                                 # color = .conf_interval_fill,
-                                 linetype = 0)
+            ggplot2::geom_ribbon(ggplot2::aes(ymin = .conf_lo,
+                                              ymax = .conf_hi,
+                                              color = .model_desc),
+                                 fill     = .conf_interval_fill,
+                                 alpha    = .conf_interval_alpha,
+                                 # color    = .conf_interval_fill,
+                                 # na.rm    = TRUE, # causes error
+                                 linetype = 0,
+                                 data = data_prepared %>% dplyr::filter(!is.na(.conf_lo))
+                                )
+
 
         # Reorder Ribbon to 1st level
         layers_start <- g$layers

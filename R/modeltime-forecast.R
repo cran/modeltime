@@ -1,16 +1,19 @@
+# MODELTIME FORECAST ----
+
 #' Forecast future data
 #'
 #' The goal of `modeltime_forecast()` is to simplify the process of
 #' forecasting future data.
 #'
-#' @param object A Modeltime Table that has been calibrated with [modeltime_calibrate()]
+#' @param object A Modeltime Table
 #' @param new_data A `tibble` containing future information to forecast.
 #'  If `NULL`, forecasts the calibration data.
 #' @param h The forecast horizon (can be used instead of `new_data` for
 #'  time series with no exogenous regressors).
 #'  Extends the calibration data `h` periods into the future.
 #' @param actual_data Reference data that is combined with the output tibble and given a `.key = "actual"`
-#' @param conf_interval An estimated confidence interval based on the in-sample residuals
+#' @param conf_interval An estimated confidence interval based on the calibration data.
+#'  This is designed to estimate future confidence from _out-of-sample prediction error_.
 #' @param ... Not currently used
 #'
 #'
@@ -21,6 +24,9 @@
 #' - `.key`: Values labeled either "prediction" or "actual"
 #' - `.index`: The timestamp index.
 #' - `.value`: The value being forecasted.
+#'
+#' Additionally, if the Modeltime Table has been previously calibrated using [modeltime_calibrate()],
+#' you will gain confidence intervals.
 #' - `.conf_lo`: The lower limit of the confidence interval.
 #' - `.conf_hi`: The upper limit of the confidence interval.
 #'
@@ -34,36 +40,52 @@
 #'
 #' @details
 #'
-#' The key parameters are (controlled by `new_data` or `h`) and
-#' combining with existing data (controlled by `actual_data`) in preparation
-#' for visualization with [plot_modeltime_forecast()].
+#' The `modeltime_forecast()` function prepares a forecast for visualization with
+#' with [plot_modeltime_forecast()]. The forecast is controlled by `new_data` or `h`,
+#' which can be combined with existing data (controlled by `actual_data`).
+#' Confidence intervals are included if the incoming Modeltime Table has been
+#' calibrated using [modeltime_calibrate()].
+#' Otherwise confidence intervals are not estimated.
 #'
+#' __New Data__
 #'
-#' __Specifying New Data or Horizon (h)__
-#'
-#' When forecasting you can specify future data using:
-#'
-#' 1. `new_data`: This is a future tibble with date column and columns for xregs
+#' When forecasting you can specify future data using `new_data`.
+#' This is a future tibble with date column and columns for xregs
 #'  extending the trained dates and exogonous regressors (xregs) if used.
+#'
 #'    - __Forecasting Evaluation Data__: By default, the `new_data` will use the `.calibration_data`
 #'      if `new_data` is not provided.
 #'      This is the equivalent of using `rsample::testing()` for getting test data sets.
-#'    - __Forecasting Future Data__: See [future_frame()] for creating future tibbles.
+#'    - __Forecasting Future Data__: See `timetk::future_frame()` for creating future tibbles.
 #'    - __Xregs__: Can be used with this method
 #'
 #'
-#' 2. `h`: This is a phrase like "1 year", which extends the `.calibration_data` into the future.
+#' __H (Horizon)__
+#'
+#' When forecasting, you can specify `h`. This is a phrase like "1 year",
+#' which extends the `.calibration_data` (1st priority) or the `actual_data` (2nd priority)
+#' into the future.
 #'    - __Forecasting Future Data__: All forecasts using `h` are
-#'      ___extended after the calibration data___, which is
+#'      ___extended after the calibration data or actual_data___.
+#'
+#'    - Extending `.calibration_data` - Calibration data is given 1st priority, which is
 #'      desirable _after refitting_ with [modeltime_refit()].
-#'      Internally, a call is made to [future_frame()] to
+#'      Internally, a call is made to `timetk::future_frame()` to
 #'      expedite creating new data using the date feature.
+#'    - Extending `actual_data` - If `h` is provided, and the modeltime table has not been
+#'      calibrated, the "actual_data" will be extended into the future. This is useful
+#'      in situations where you want to go directly from `modeltime_table()` to `modeltime_forecast()`
+#'      without calibrating or refitting.
 #'    - __Xregs__: Cannot be used because future data must include new xregs.
+#'      If xregs are desired, build a future data frame and use `new_data`.
 #'
 #' __Actual Data__
 #'
 #' This is reference data that contains the true values of the time-stamp data.
 #' It helps in visualizing the performance of the forecast vs the actual data.
+#'
+#' When `h` is used and the Modeltime Table has _not been calibrated_, then the
+#' actual data is extended into the future periods that are defined by `h`.
 #'
 #' __Confidence Interval Estimation__
 #'
@@ -122,9 +144,18 @@
 #' calibration_tbl %>%
 #'     modeltime_accuracy()
 #'
-#' # ---- FORECAST ----
+#' # ---- FUTURE FORECAST ----
 #'
 #' calibration_tbl %>%
+#'     modeltime_forecast(
+#'         new_data    = testing(splits),
+#'         actual_data = m750
+#'     )
+#'
+#' # ---- ALTERNATIVE: FORECAST WITHOUT CONFIDENCE INTERVALS ----
+#' # Skips Calibration Step, No Confidence Intervals
+#'
+#' models_tbl %>%
 #'     modeltime_forecast(
 #'         new_data    = testing(splits),
 #'         actual_data = m750
@@ -137,16 +168,22 @@ NULL
 #' @rdname modeltime_forecast
 modeltime_forecast <- function(object, new_data = NULL, h = NULL, actual_data = NULL, conf_interval = 0.95, ...) {
 
-    # Checks
-
-    # Check calibration data
-    if (!all(c(".type", ".calibration_data") %in% names(object))) {
-        glubort("Expecting columns '.type' and '.calibration_data'. Try running 'modeltime_calibrate()' before using 'modeltime_forecast()'.")
+    if (is.null(new_data) && is.null(h)) {
+        if (all(c(".type", ".calibration_data") %in% names(object))) {
+            message("Using '.calibration_data' to forecast.")
+        } else if (!is.null(actual_data)) {
+            message("Using 'actual_data' to forecast. This may not be desirable for sequence models such as ARIMA.")
+        } else {
+            rlang::abort("Forecast requires either: \n - 'new_data' \n - 'h'")
+        }
     }
 
-    # Check New Data
-    if (is.null(new_data) && is.null(h)) {
-        message("'new_data' is missing. Using '.calibration_data' to forecast.")
+    if (!is.null(h)) {
+        if (!all(c(".type", ".calibration_data") %in% names(object))) {
+           if (is.null(actual_data)) {
+               rlang::abort("Forecasting with 'h' requires one of: \n - '.calibration_data' (see '?modeltime_calibrate()') \n - 'actual_data'")
+           }
+        }
     }
 
     UseMethod("modeltime_forecast")
@@ -166,8 +203,18 @@ modeltime_forecast.mdl_time_tbl <- function(object, new_data = NULL, h = NULL, a
     n_models <- data$.model_id %>% unique() %>% length()
 
     # HANDLE CALIBRATION DATA
-    data_calibration <- data %>%
-        dplyr::select(.model_id, .calibration_data)
+    if (!all(c(".type", ".calibration_data") %in% names(data))) {
+        # glubort("Expecting columns '.type' and '.calibration_data'. Try running 'modeltime_calibrate()' before using 'modeltime_forecast()'.")
+        conf_interval = NULL
+        data <- data %>%
+            dplyr::mutate(
+                .type = NA,
+                .calibration_data = NA
+            )
+    } else {
+        data_calibration <- data %>%
+            dplyr::select(.model_id, .calibration_data)
+    }
 
     # CREATE FORECAST ----
 
@@ -178,27 +225,31 @@ modeltime_forecast.mdl_time_tbl <- function(object, new_data = NULL, h = NULL, a
         safe_modeltime_forecast_map(
             new_data    = new_data,
             h           = h,
-            actual_data = actual_data
+            actual_data = actual_data,
+            bind_actual = TRUE # Binds the actual data during the forecast
         )
 
     if ("actual" %in% unique(ret_1$.key)) {
         ret_1 <- ret_1 %>%
             dplyr::mutate(.model_desc = ifelse(.key == "actual", "ACTUAL", .model_desc)) %>%
-            dplyr::mutate(.model_id = ifelse(.key == "actual", NA_integer_, .model_id))
+            dplyr::mutate(.model_id   = ifelse(.key == "actual", NA_integer_, .model_id))
     }
 
     # Compute subsequent models without actual data
     ret_2 <- tibble::tibble()
 
     if (n_models > 1) {
+
         ret_2 <- data %>%
             dplyr::ungroup() %>%
             dplyr::slice(2:dplyr::n()) %>%
             safe_modeltime_forecast_map(
                 new_data    = new_data,
                 h           = h,
-                actual_data = NULL # Don't pass actual_data
+                actual_data = actual_data,
+                bind_actual = FALSE # Skips iterative rowwise binding of actual_data
             )
+
     }
 
     # If errors occur, .nested.col remains - needs removed
@@ -224,6 +275,95 @@ modeltime_forecast.mdl_time_tbl <- function(object, new_data = NULL, h = NULL, a
 }
 
 
+# SAFE FORECAST MAPPERS ----
+
+safe_modeltime_forecast_map <- function(data, new_data = NULL, h = NULL, actual_data = NULL, bind_actual = TRUE, ...) {
+
+    safe_modeltime_forecast <- purrr::safely(mdl_time_forecast, otherwise = NA, quiet = FALSE)
+
+    data %>%
+        dplyr::mutate(.nested.col = purrr::map2(
+            .x         = .model,
+            .y         = .calibration_data,
+            .f         = function(obj, cal) {
+
+                ret <- safe_modeltime_forecast(
+                    obj, cal,
+                    new_data      = new_data,
+                    h             = h,
+                    actual_data   = actual_data,
+                    bind_actual   = bind_actual
+                )
+
+                err <- ret$error
+
+                ret <- ret$result
+
+                # if (!is.null(error)) warning(err)
+
+                return(ret)
+            })
+        ) %>%
+        # Drop unnecessary columns
+        dplyr::select(-.model, -.type, -.calibration_data) %>%
+        tidyr::unnest(cols = .nested.col)
+}
+
+
+# SAFE CONF INTERVAL MAPPERS ----
+
+safe_conf_interval_map <- function(data, data_calibration, conf_interval) {
+
+    safe_ci <- purrr::safely(
+        centered_residuals,
+        otherwise = tibble::tibble(
+            .conf_lo = NA,
+            .conf_hi = NA
+        ),
+        quiet = FALSE)
+
+    data %>%
+        dplyr::group_by(.model_id) %>%
+        tidyr::nest() %>%
+        dplyr::left_join(data_calibration, by = ".model_id") %>%
+        dplyr::mutate(.ci = purrr::map2(data, .calibration_data, .f = function(data_1, data_2) {
+            res <- safe_ci(data_1, data_2, conf_interval = conf_interval)
+            res %>% purrr::pluck("result")
+        })
+        ) %>%
+        dplyr::select(-.calibration_data) %>%
+        tidyr::unnest(cols = c(data, .ci)) %>%
+        dplyr::ungroup()
+}
+
+
+centered_residuals <- function(data_1, data_2, conf_interval) {
+
+    # Collect absolute residuals
+    ret <- tryCatch({
+
+        residuals <- c(data_2$.residuals, -data_2$.residuals)
+        s <- stats::sd(residuals)
+
+        data_1 %>%
+            dplyr::mutate(
+                .conf_lo = stats::qnorm((1-conf_interval)/2, mean = .value, sd = s),
+                .conf_hi = stats::qnorm((1+conf_interval)/2, mean = .value, sd = s)
+            ) %>%
+            dplyr::select(.conf_lo, .conf_hi)
+
+    }, error = function(e) {
+        tibble::tibble(
+            .conf_lo = NA,
+            .conf_hi = NA
+        )
+    })
+
+    return(ret)
+
+}
+
+
 # FORECAST UTILITIES ----
 
 #' Modeltime Forecast Helpers
@@ -233,53 +373,91 @@ modeltime_forecast.mdl_time_tbl <- function(object, new_data = NULL, h = NULL, a
 #'
 #' @inheritParams modeltime_forecast
 #' @param calibration_data Data that has been calibrated from a testing set
+#' @param bind_actual Logical. Whether or not to skip rowwise binding of `actual_data``
 #'
 #' @return A tibble with forecast features
 #'
 #' @keywords internal
 #'
 #' @export
-mdl_time_forecast <- function(object, calibration_data, new_data = NULL, h = NULL, actual_data = NULL, ...) {
+mdl_time_forecast <- function(object, calibration_data, new_data = NULL, h = NULL, actual_data = NULL, bind_actual = TRUE, ...) {
     UseMethod("mdl_time_forecast", object)
 }
 
 #' @export
-mdl_time_forecast.model_fit <- function(object, calibration_data, new_data = NULL, h = NULL, actual_data = NULL, ...) {
+mdl_time_forecast.model_fit <- function(object, calibration_data, new_data = NULL, h = NULL, actual_data = NULL, bind_actual = TRUE, ...) {
+
+    calib_provided <- FALSE
+    h_provided     <- FALSE
 
     # MODEL OBJECT
 
     # If no 'new_data', forecast 'calibration_data'
     if (is.null(new_data) && is.null(h)) {
-        new_data <- calibration_data
+        if (is.data.frame(calibration_data)) {
+            new_data <- calibration_data
+            calib_provided <- TRUE
+        } else if (is.data.frame(actual_data)) {
+            new_data <- actual_data
+        } else {
+            rlang::abort("Forecast requires 'new_data', 'calibration_data', or 'actual_data'.")
+        }
     }
 
     # Convert 'h' to 'new_data'
     if (!is.null(h)) {
-        # Suppress date selection
-        tryCatch({
-            suppressMessages(new_data <- timetk::future_frame(calibration_data, .length_out = h, ...))
-        }, error = function(e) {
-            rlang::abort("'h' requires a 'modeltime' model fitted with a date feature to extend into the future. 'parsnip' models do not contain this.")
-        })
+        if (is.data.frame(calibration_data)) {
+            tryCatch({
+                # Suppress date selection
+                suppressMessages(new_data <- timetk::future_frame(calibration_data, .length_out = h, ...))
+            }, error = function(e) {
+                rlang::abort("Attempt to extend '.calibration_data' into the future using 'h' has failed.")
+            })
+        } else if (is.data.frame(actual_data)) {
+            tryCatch({
+                # Suppress date selection
+                suppressMessages(new_data <- timetk::future_frame(actual_data, .length_out = h, ...))
+            }, error = function(e) {
+                rlang::abort("Attempt to extend 'actual_data' into the future using 'h' has failed.")
+            })
+        } else {
+            rlang::abort("Forecast requires 'new_data', '.calibration_data', or 'actual_data'.")
+        }
 
+        h_provided <- TRUE
     }
 
+    # Setup data for predictions
     nms_time_stamp_predictors <- timetk::tk_get_timeseries_variables(new_data)[1]
     time_stamp_predictors_tbl <- new_data %>%
         dplyr::select(!! rlang::sym(nms_time_stamp_predictors)) %>%
         dplyr::rename(.index = !! rlang::sym(nms_time_stamp_predictors))
 
-    modeltime_forecast <- object %>%
-        stats::predict(new_data = new_data) %>%
-        dplyr::bind_cols(time_stamp_predictors_tbl)
+    # PREDICTIONS
 
+    modeltime_forecast <- tryCatch({
+        predictions_tbl <- object %>% stats::predict(new_data = new_data)
+
+        modeltime_forecast <- predictions_tbl %>%
+            dplyr::bind_cols(time_stamp_predictors_tbl)
+
+    }, error = function(e) {
+        if (any(c(h_provided, calib_provided))) {
+            # Most likely issue: need to provide external regressors
+            glubort("Problem occurred during prediction. Most likely cause is missing external regressors. Try using 'new_data' and supply a dataset containing all required columns. {e}")
+        } else {
+            glubort("Problem occurred during prediction. {e}")
+        }
+    })
+
+    # Format data
     data_formatted <- modeltime_forecast %>%
         dplyr::mutate(.key = "prediction") %>%
         dplyr::select(.key, dplyr::everything())
 
     # COMBINE ACTUAL DATA
 
-    if (!is.null(actual_data)) {
+    if (!is.null(actual_data) && bind_actual) {
 
         # setup
         nms_final     <- names(data_formatted)
@@ -362,7 +540,10 @@ mdl_time_forecast.model_fit <- function(object, calibration_data, new_data = NUL
 }
 
 #' @export
-mdl_time_forecast.workflow <- function(object, calibration_data, new_data = NULL, h = NULL, actual_data = NULL, ...) {
+mdl_time_forecast.workflow <- function(object, calibration_data, new_data = NULL, h = NULL, actual_data = NULL, bind_actual = TRUE, ...) {
+
+    calib_provided <- FALSE
+    h_provided     <- FALSE
 
     # Checks
     if (!object$trained) {
@@ -376,20 +557,39 @@ mdl_time_forecast.workflow <- function(object, calibration_data, new_data = NULL
 
     # NEW DATA
 
-    # If no 'new_data' and no 'h', forecast 'calibration_data'
+    # If no 'new_data', forecast 'calibration_data' or 'actual_data'
     if (is.null(new_data) && is.null(h)) {
-        new_data <- calibration_data
+        if (is.data.frame(calibration_data)) {
+            new_data <- calibration_data
+            calib_provided <- TRUE
+        } else if (is.data.frame(actual_data)) {
+            new_data <- actual_data
+        } else {
+            rlang::abort("Forecast requires 'new_data', 'calibration_data', or 'actual_data'.")
+        }
     }
 
     # Convert 'h' to 'new_data'
     if (!is.null(h)) {
-        # Suppress date selection
-        tryCatch({
-            suppressMessages(new_data <- timetk::future_frame(calibration_data, .length_out = h, ...))
-        }, error = function(e) {
-            rlang::abort("'h' requires a 'modeltime' model fitted with a date feature to extend into the future. 'parsnip' models do not contain this.")
-        })
+        if (is.data.frame(calibration_data)) {
+            tryCatch({
+                # Suppress date selection
+                suppressMessages(new_data <- timetk::future_frame(calibration_data, .length_out = h, ...))
+            }, error = function(e) {
+                rlang::abort("Attempt to extend '.calibration_data' into the future using 'h' has failed.")
+            })
+        } else if (is.data.frame(actual_data)) {
+            tryCatch({
+                # Suppress date selection
+                suppressMessages(new_data <- timetk::future_frame(actual_data, .length_out = h, ...))
+            }, error = function(e) {
+                rlang::abort("Attempt to extend 'actual_data' into the future using 'h' has failed.")
+            })
+        } else {
+            rlang::abort("Forecast requires 'new_data', '.calibration_data', or 'actual_data'.")
+        }
 
+        h_provided <- TRUE
     }
 
     # Issue - Forge processes all recipe steps at once, so need to have outcomes
@@ -401,8 +601,19 @@ mdl_time_forecast.workflow <- function(object, calibration_data, new_data = NULL
         new_data[,y_var] <- 1000
     }
 
-    # Apply forge, just to get predictors
-    new_data_forged <- hardhat::forge(new_data = new_data, blueprint = mld$blueprint, outcomes = TRUE)
+    # Apply forge just to get predictors
+    new_data_forged <- tryCatch({
+        hardhat::forge(new_data, mld$blueprint, outcomes = TRUE)
+    }, error = function(e) {
+        if (any(c(h_provided, calib_provided))) {
+            # Most likely issue: need to provide external regressors
+            glubort("Problem occurred in getting predictors from new data. Most likely cause is missing external regressors. Try using 'new_data' and supply a dataset containing all required columns. {e}")
+        } else {
+            glubort("Problem occurred getting predictors from new data. {e}")
+        }
+    })
+
+    # TIMESTAMP + PREDICTORS
 
     nms_time_stamp_predictors <- timetk::tk_get_timeseries_variables(new_data_forged$predictors)[1]
 
@@ -411,28 +622,38 @@ mdl_time_forecast.workflow <- function(object, calibration_data, new_data = NULL
             dplyr::select(!! rlang::sym(nms_time_stamp_predictors)) %>%
             dplyr::rename(.index = !! rlang::sym(nms_time_stamp_predictors))
     } else {
+        # Most ML algorithms won't have time stamp
         idx <- new_data %>% timetk::tk_index()
-        time_stamp_predictors_tbl <- new_data_forged$predictors %>%
-            dplyr::mutate(.index = idx)
-    }
 
+        if (length(idx) == nrow(new_data_forged$predictors)) {
+            # IF index and predictors are same length, all good
+            time_stamp_predictors_tbl <- new_data_forged$predictors %>%
+                dplyr::mutate(.index = idx)
+        } else {
+            # Test to see if missing data is being dropped (happens with step_naomit)
+            new_data_missing_removed_tbl <- new_data %>%
+                tibble::rowid_to_column(var = "..id") %>%
+                tidyr::drop_na()
+
+            if (nrow(new_data_forged$predictors) == nrow(new_data_missing_removed_tbl)) {
+                # If row counts are identical, subset idx by retained rows
+                time_stamp_predictors_tbl <- new_data_forged$predictors %>%
+                    dplyr::mutate(.index = idx[new_data_missing_removed_tbl$..id])
+            } else {
+                glubort("Problem occurred combining processed data with timestamps. Most likely cause is rows being added or removed during preprocessing. Try imputing missing values to retain the full number of rows.")
+            }
+        }
+    }
 
     # FORGE NEW DATA
 
     # Issue - hardhat::forge defaults to outcomes = FALSE, which creates an error at predict.workflow()
-
-    # modeltime_forecast <- object %>%
-    #     stats::predict(new_data = new_data) %>%
-    #     dplyr::bind_cols(time_stamp_predictors_tbl)
-
     blueprint <- object$pre$mold$blueprint
     forged    <- hardhat::forge(new_data, blueprint, outcomes = TRUE)
     new_data  <- forged$predictors
-
-    fit <- object$fit$fit
+    fit       <- object$fit$fit
 
     # PREDICT
-
     data_formatted <- fit %>%
         stats::predict(new_data = new_data) %>%
         dplyr::bind_cols(time_stamp_predictors_tbl) %>%
@@ -442,7 +663,7 @@ mdl_time_forecast.workflow <- function(object, calibration_data, new_data = NULL
 
     # COMBINE ACTUAL DATA
 
-    if (!is.null(actual_data)) {
+    if (!is.null(actual_data) && bind_actual) {
 
         nms_final <- names(data_formatted)
 
@@ -452,17 +673,69 @@ mdl_time_forecast.workflow <- function(object, calibration_data, new_data = NULL
 
         actual_data_prepped <- actual_data_forged$outcomes %>%
             dplyr::bind_cols(actual_data_forged$predictors) %>%
-            dplyr::mutate(.key = "actual") %>%
-            dplyr::mutate(.index = timetk::tk_index(actual_data))
+            dplyr::mutate(.key = "actual")
 
-        target_sym <- rlang::sym(names(actual_data_prepped)[1])
+        # ---- BUG: if NROWs before/after don't match ----
+        # - This situation is likely due to missing values in predictors
+        # - Predictors are irrelevant to Actual Data, so the solution implemented fills
+        #   missing predictors with a downup strategy. Filling reduces the likelihood that
+        #   rows will be dropped.
 
-        data_formatted <- data_formatted %>%
-            dplyr::bind_rows(actual_data_prepped) %>%
-            dplyr::mutate(.pred = ifelse(is.na(.pred), !! target_sym, .pred))
+        nrow_before <- nrow(actual_data)
+        nrow_after  <- nrow(actual_data_prepped)
+        idx_actual  <- timetk::tk_index(actual_data)
 
-        data_formatted <- data_formatted %>%
-            dplyr::select(!!! rlang::syms(nms_final))
+        if (nrow_after == nrow_before) {
+
+            actual_data_prepped <- actual_data_prepped %>%
+                dplyr::mutate(.index = idx_actual)
+
+        } else if (nrow_after < nrow_before) {
+            # message(stringr::str_glue("Transformations are resulting in a reduced number of rows in actual data.
+            #                           Attempting to reconcile:
+            #                           - Filling missing predictors in actual data to prevent NA values from causing rows to be dropped."))
+
+            # Try to reconcile by filling in missing data
+            # - Most likely cause is NA's being dropped by step_naomit()
+
+            actual_data_fill_missing <- actual_data %>%
+                tidyr::fill(dplyr::everything(), -names(actual_data_forged$outcomes), .direction = c("downup"))
+
+            actual_data_reconcile_forged <- hardhat::forge(
+                new_data = actual_data_fill_missing,
+                blueprint = mld$blueprint,
+                outcomes = TRUE
+            )
+
+            actual_data_reconcile_prepped <- actual_data_reconcile_forged$outcomes %>%
+                dplyr::bind_cols(actual_data_reconcile_forged$predictors) %>%
+                dplyr::mutate(.key = "actual")
+
+            if (nrow(actual_data_reconcile_prepped) == nrow(actual_data) ) {
+                # message("Reconciliation successful.")
+
+                actual_data_prepped <- actual_data_reconcile_prepped %>%
+                    dplyr::mutate(.index = idx_actual)
+
+            } else {
+                rlang::warn("Could not reconcile actual data. To reconcile, please remove actual data from modeltime_forecast() and add manually using bind_rows().")
+                actual_data_prepped <- NULL
+            }
+
+        } else {
+            rlang::warn("Transformations are causing your actual data to increase in size. To reconcile, please remove actual data from modeltime_forecast() and add manually using bind_rows().")
+            actual_data_prepped <- NULL
+        }
+
+        # Combine Actual Data with Data Formatted
+        if (!is.null(actual_data_prepped)) {
+            target_sym <- rlang::sym(names(actual_data_prepped)[1])
+
+            data_formatted <- data_formatted %>%
+                dplyr::bind_rows(actual_data_prepped) %>%
+                dplyr::mutate(.pred = ifelse(is.na(.pred), !! target_sym, .pred)) %>%
+                dplyr::select(!!! rlang::syms(nms_final))
+        }
 
     }
 
@@ -476,147 +749,3 @@ mdl_time_forecast.workflow <- function(object, calibration_data, new_data = NULL
     return(ret)
 
 }
-
-
-# SAFE FORECAST MAPPERS ----
-
-safe_modeltime_forecast_map <- function(data, new_data = NULL, h = NULL, actual_data = NULL, ...) {
-
-    safe_modeltime_forecast <- purrr::safely(mdl_time_forecast, otherwise = NA, quiet = FALSE)
-
-    data %>%
-        dplyr::mutate(.nested.col = purrr::map2(
-            .x         = .model,
-            .y         = .calibration_data,
-            .f         = function(obj, cal) {
-
-                ret <- safe_modeltime_forecast(
-                    obj, cal,
-                    new_data      = new_data,
-                    h             = h,
-                    actual_data   = actual_data
-                    # ,
-                    # ...
-                )
-
-                ret <- ret %>% purrr::pluck("result")
-
-                return(ret)
-            })
-        ) %>%
-        # Drop unnecessary columns
-        dplyr::select(-.model, -.type, -.calibration_data) %>%
-        tidyr::unnest(cols = .nested.col)
-}
-
-
-# SAFE CONF INTERVAL MAPPERS ----
-
-safe_conf_interval_map <- function(data, data_calibration, conf_interval) {
-
-    safe_ci <- purrr::safely(
-        centered_residuals,
-        otherwise = tibble::tibble(
-            .conf_lo = NA,
-            .conf_hi = NA
-        ),
-        quiet = FALSE)
-
-    data %>%
-        dplyr::group_by(.model_id) %>%
-        tidyr::nest() %>%
-        dplyr::left_join(data_calibration, by = ".model_id") %>%
-        dplyr::mutate(.ci = purrr::map2(data, .calibration_data, .f = function(data_1, data_2) {
-            res <- safe_ci(data_1, data_2, conf_interval = conf_interval)
-            res %>% purrr::pluck("result")
-        })
-        ) %>%
-        dplyr::select(-.calibration_data) %>%
-        tidyr::unnest(cols = c(data, .ci)) %>%
-        dplyr::ungroup()
-}
-
-
-centered_residuals <- function(data_1, data_2, conf_interval) {
-
-    # Collect absolute residuals
-    ret <- tryCatch({
-
-        residuals <- c(data_2$.residuals, -data_2$.residuals)
-        s <- stats::sd(residuals)
-
-        data_1 %>%
-            dplyr::mutate(
-                .conf_lo = stats::qnorm((1-conf_interval)/2, mean = .value, sd = s),
-                .conf_hi = stats::qnorm((1+conf_interval)/2, mean = .value, sd = s)
-            ) %>%
-            dplyr::select(.conf_lo, .conf_hi)
-
-    }, error = function(e) {
-        tibble::tibble(
-            .conf_lo = NA,
-            .conf_hi = NA
-        )
-    })
-
-    return(ret)
-
-}
-
-
-# # Normal Conf Interval
-# normal_ci_mean_shifted <- function(data, conf_interval = 0.95) {
-#
-#     x <- data$.residuals
-#
-#     probs      <- 0.5 + c(-conf_interval/2, conf_interval/2)
-#     quantile_x <- stats::quantile(x, prob = probs, na.rm = TRUE)
-#     iq_range   <- quantile_x[[2]] - quantile_x[[1]]
-#     limits     <- quantile_x + iq_range * c(-1, 1)
-#
-#     ci_lo_vec  <- limits[1]
-#     ci_hi_vec  <- limits[2]
-#
-#     # Apply mean shift
-#     suppressWarnings({
-#         mu <- mean(x, na.rm = T)
-#     })
-#
-#     ci_lo_vec_shifted <- min(ci_lo_vec, ci_lo_vec - mu)
-#     ci_hi_vec_shifted <- max(ci_hi_vec, ci_hi_vec - mu)
-#
-#     # Tibble
-#     ret <- tibble::tibble(
-#         .conf_lo = ci_lo_vec_shifted,
-#         .conf_hi = ci_hi_vec_shifted
-#     )
-#
-#     return(ret)
-# }
-#
-# # Normal Conf Interval
-# residual_regression <- function(data, conf_interval = 0.95) {
-#
-#     model <- tryCatch({
-#         stats::lm(data$.residuals ~ seq_along(data$.residuals))
-#     }, error = function(e) {
-#         NULL
-#     })
-#
-#     sd_residuals <- stats::sd(model$residuals)
-#
-#     alpha   <- (1-conf_interval)/2
-#     z_score <- abs(qnorm(alpha))
-#
-#     # Tibble
-#     ret <- tibble::tibble(
-#         .conf_lo = (-z_score) * sd_residuals,
-#         .conf_hi = (z_score) * sd_residuals
-#     )
-#
-#     return(ret)
-#
-#
-# }
-
-

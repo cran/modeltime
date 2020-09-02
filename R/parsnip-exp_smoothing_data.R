@@ -3,7 +3,7 @@
 # they are already in the parsnip model database. We'll exclude them from
 # coverage stats for this reason.
 
-# nocov
+# nocov start
 
 
 make_exp_smoothing <- function() {
@@ -16,6 +16,7 @@ make_exp_smoothing <- function() {
     # * Model ----
     parsnip::set_model_engine("exp_smoothing", mode = "regression", eng = "ets")
     parsnip::set_dependency("exp_smoothing", "ets", "forecast")
+    parsnip::set_dependency("exp_smoothing", "ets", "modeltime")
 
     # * Args ----
     parsnip::set_model_arg(
