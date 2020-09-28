@@ -2,10 +2,11 @@
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  # out.width='100%',
-  fig.align = "center",
-  fig.width = 7,
-  fig.height = 5,
+  
+  out.width='100%',
+  # fig.align = "center",
+  # fig.width = 7,
+  # fig.height = 5,
   
   message = FALSE,
   warning = FALSE
@@ -136,7 +137,4 @@ refit_tbl %>%
       .legend_max_width = 25, # For mobile screens
       .interactive      = interactive
     )
-
-## ---- echo=FALSE, out.width="100%"--------------------------------------------
-knitr::include_graphics("time_series_course.jpg")
 

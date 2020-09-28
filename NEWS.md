@@ -1,5 +1,37 @@
+# modeltime 0.2.0
 
-# modeltime 0.0.2.9000 (Development Version)
+__Ensembles__
+
+- Integrates `modeltime.ensemble`, a new R package designed for forecasting with ensemble models. 
+
+___New Workflow Helper Functions___
+
+- `add_modeltime_model()` - A helper function making it easy to add a fitted parsnip or workflow object to a modeltime table
+- `pluck_modeltime_model()` & `pull_modeltime_model()` - A helper function making it easy to extract a model from a modeltime table 
+
+
+__Improvements__
+
+- Documentation - Algorithms now identify default parameter values in the  "Engine Details" Section in their respective documentation. E.g. `?prophet_boost`
+- `prophet_reg()` can now have regressors controlled via `set_engine()` using the following parameters:
+    - `regressors.mode` - Set to `seasonality.mode` by default.
+    - `regressors.prior.scale` - Set to 10,000 by default.
+    - `regressors.standardize` - Set to "auto" by default. 
+    
+__Data Sets__
+
+Modeltime now includes 4 new data sets:
+
+- `m750` - M750 Time Series Dataset
+- `m750_models` - 3 Modeltime Models made on the M750 Dataset
+- `m750_splits` - An `rsplit` object containing Train/test splits of the M750 data
+- `m750_training_resamples` - A Time Series Cross Validation `time_series_cv` object made from the `training(m750_splits)`
+
+__Bug Fix__
+
+- `plot_modeltime_forecast()` fix issue with "ACTUAL" data being shown at bottom of legend list. Should be first item. 
+
+# modeltime 0.1.0 
 
 ### New Features 
 

@@ -109,12 +109,18 @@ in lieu of recreating the object from scratch.
 The standardized parameter names in \code{modeltime} can be mapped to their original
 names in each engine:\tabular{ll}{
    modeltime \tab prophet \cr
-   growth \tab growth \cr
-   changepoint_num \tab n.changepoints \cr
-   season \tab seasonality.mode \cr
-   prior_scale_changepoints \tab changepoint.prior.scale \cr
-   prior_scale_seasonality \tab seasonality.prior.scale \cr
-   prior_scale_holidays \tab holidays.prior.scale \cr
+   growth \tab growth ('linear') \cr
+   changepoint_num \tab n.changepoints (25) \cr
+   changepoint_range \tab changepoints.range (0.8) \cr
+   seasonality_yearly \tab yearly.seasonality ('auto') \cr
+   seasonality_weekly \tab weekly.seasonality ('auto') \cr
+   seasonality_daily \tab daily.seasonality ('auto') \cr
+   season \tab seasonality.mode ('additive') \cr
+   prior_scale_changepoints \tab changepoint.prior.scale (0.05) \cr
+   prior_scale_seasonality \tab seasonality.prior.scale (10) \cr
+   prior_scale_holidays \tab holidays.prior.scale (10) \cr
+   logistic_cap \tab df$cap (NULL) \cr
+   logistic_floor \tab df$floor (NULL) \cr
 }
 
 
@@ -129,9 +135,7 @@ Function Parameters:\preformatted{## function (df = NULL, growth = "linear", cha
 ##     daily.seasonality = "auto", holidays = NULL, seasonality.mode = "additive", 
 ##     seasonality.prior.scale = 10, holidays.prior.scale = 10, changepoint.prior.scale = 0.05, 
 ##     mcmc.samples = 0, interval.width = 0.8, uncertainty.samples = 1000, 
-##     fit = TRUE, ...)  
-##  - attr(*, "srcref")= 'srcref' int [1:8] 84 12 147 1 12 1 1206 1269
-##   ..- attr(*, "srcfile")=Classes 'srcfilealias', 'srcfile' <environment: 0x7fa015679e90>
+##     fit = TRUE, ...)
 }
 
 Parameter Notes:
@@ -142,6 +146,16 @@ Parameter Notes:
 \item \code{uncertainty.samples}: The default is set to 0 because the prophet
 uncertainty intervals are not used as part of the Modeltime Workflow.
 You can override this setting if you plan to use prophet's uncertainty tools.
+}
+
+Regressors:
+\itemize{
+\item Regressors are provided via the \code{fit()} or \code{recipes} interface, which passes
+regressors to \code{prophet::add_regressor()}
+\item Parameters can be controlled in \code{set_engine()} via: \code{regressors.prior.scale}, \code{regressors.standardize},
+and \code{regressors.mode}
+\item The regressor prior scale implementation default is \code{regressors.prior.scale = 1e4}, which deviates from
+the \code{prophet} implementation (defaults to holidays.prior.scale)
 }
 
 Logistic Growth and Saturation Levels:
