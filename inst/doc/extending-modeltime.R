@@ -4,7 +4,7 @@ knitr::opts_chunk$set(
   comment = "#>",
   message = FALSE,
   warning = FALSE,
-  # out.width = '80%',
+  out.width = '80%',
   fig.width = 5,
   fig.height = 4,
   fig.align='center'

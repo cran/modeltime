@@ -1,3 +1,9 @@
+# modeltime 0.2.1
+
+__Ensembles__
+
+- `modeltime_refit()` - Changes to improve fault tolerance and error handling / messaging when making ensembles. 
+
 # modeltime 0.2.0
 
 __Ensembles__
