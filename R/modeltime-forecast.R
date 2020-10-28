@@ -14,6 +14,13 @@
 #' @param actual_data Reference data that is combined with the output tibble and given a `.key = "actual"`
 #' @param conf_interval An estimated confidence interval based on the calibration data.
 #'  This is designed to estimate future confidence from _out-of-sample prediction error_.
+#' @param keep_data Whether or not to keep the `new_data` and `actual_data` as extra columns in the results.
+#'  This can be useful if there is an important feature in the `new_data` and `actual_data` needed
+#'  when forecasting.
+#'  Default: `FALSE`.
+#' @param arrange_index Whether or not to sort the index in rowwise chronological order (oldest to newest) or to
+#'  keep the original order of the data.
+#'  Default: `FALSE`.
 #' @param ... Not currently used
 #'
 #'
@@ -106,6 +113,18 @@
 #' the refitted model (on data with a smaller sample size). New observations typically improve
 #' future accuracy, which in most cases makes the out-of-sample confidence intervals conservative.
 #'
+#' __Keep Data__
+#'
+#' Include the new data (and actual data) as extra columns with the results of the model forecasts.
+#' This can be helpful when the new data includes information useful to the forecasts.
+#' An example is when forecasting _Panel Data_ and the new data contains
+#' ID features related to the time series group that the forecast belongs to.
+#'
+#' __Arrange Index__
+#'
+#' By default, `modeltime_forecast()` keeps the original order of the data.
+#' If desired, the user can sort the output by `.key`, `.model_id` and `.index`.
+#'
 #'
 #' @examples
 #' library(tidyverse)
@@ -161,13 +180,24 @@
 #'         actual_data = m750
 #'     )
 #'
+#' # ---- KEEP NEW DATA WITH FORECAST ----
+#' # Keeps the new data. Useful if new data has information
+#' #  like ID features that should be kept with the forecast data
+#'
+#' calibration_tbl %>%
+#'     modeltime_forecast(
+#'         new_data      = testing(splits),
+#'         keep_data     = TRUE
+#'     )
+#'
 #' @name modeltime_forecast
 NULL
 
 #' @export
 #' @rdname modeltime_forecast
-modeltime_forecast <- function(object, new_data = NULL, h = NULL, actual_data = NULL, conf_interval = 0.95, ...) {
+modeltime_forecast <- function(object, new_data = NULL, h = NULL, actual_data = NULL, conf_interval = 0.95, keep_data = FALSE, arrange_index = FALSE, ...) {
 
+    # Required arguments & messages
     if (is.null(new_data) && is.null(h)) {
         if (all(c(".type", ".calibration_data") %in% names(object))) {
             message("Using '.calibration_data' to forecast.")
@@ -178,25 +208,49 @@ modeltime_forecast <- function(object, new_data = NULL, h = NULL, actual_data = 
         }
     }
 
+    # Horizon, h: Checks
     if (!is.null(h)) {
+
+        # Check for .calibration data or actual data if using `h`
+        # - h needs this to extend from
+        using_actual <- FALSE
         if (!all(c(".type", ".calibration_data") %in% names(object))) {
-           if (is.null(actual_data)) {
+            if (is.null(actual_data)) {
                rlang::abort("Forecasting with 'h' requires one of: \n - '.calibration_data' (see '?modeltime_calibrate()') \n - 'actual_data'")
-           }
+            }
+            using_actual <- TRUE
         }
+
+        # Ensure no overlapping timestamps if using `h`
+        # - `h` doesn't know how to handle overlapping time series
+        abort_msg <- "modeltime_forecast(): Overlapping dates detected indicating time series groups. 'h' cannot be used to forecast. Try using 'new_data' that has been extended using `timetk::future_frame()`."
+        if (using_actual) {
+            validate_no_overlapping_dates(
+                data          = actual_data,
+                abort_message = abort_msg
+            )
+        } else {
+            calib_data <- object %>%
+                purrr::pluck(".calibration_data", 1)
+
+            validate_no_overlapping_dates(
+                data          = calib_data,
+                abort_message = abort_msg
+            )
+        }
+
     }
 
     UseMethod("modeltime_forecast")
 }
 
 #' @export
-modeltime_forecast.default <- function(object, new_data = NULL, h = NULL, actual_data = NULL, conf_interval = 0.95, ...) {
+modeltime_forecast.default <- function(object, new_data = NULL, h = NULL, actual_data = NULL, conf_interval = 0.95, keep_data = FALSE, arrange_index = FALSE, ...) {
     glubort("Received an object of class: {class(object)[1]}. Expected an object of class:\n 1. 'mdl_time_tbl' - A Model Time Table made with 'modeltime_table()' and calibrated with 'modeltime_calibrate()'.")
-
 }
 
 #' @export
-modeltime_forecast.mdl_time_tbl <- function(object, new_data = NULL, h = NULL, actual_data = NULL, conf_interval = 0.95, ...) {
+modeltime_forecast.mdl_time_tbl <- function(object, new_data = NULL, h = NULL, actual_data = NULL, conf_interval = 0.95, keep_data = FALSE, arrange_index = FALSE, ...) {
 
     data <- object
 
@@ -223,10 +277,12 @@ modeltime_forecast.mdl_time_tbl <- function(object, new_data = NULL, h = NULL, a
         dplyr::ungroup() %>%
         dplyr::slice(1) %>%
         safe_modeltime_forecast_map(
-            new_data    = new_data,
-            h           = h,
-            actual_data = actual_data,
-            bind_actual = TRUE # Binds the actual data during the forecast
+            new_data      = new_data,
+            h             = h,
+            actual_data   = actual_data,
+            keep_data     = keep_data,
+            arrange_index = arrange_index,
+            bind_actual   = TRUE # Rowwise binds the actual data during the forecast
         )
 
     if ("actual" %in% unique(ret_1$.key)) {
@@ -244,10 +300,12 @@ modeltime_forecast.mdl_time_tbl <- function(object, new_data = NULL, h = NULL, a
             dplyr::ungroup() %>%
             dplyr::slice(2:dplyr::n()) %>%
             safe_modeltime_forecast_map(
-                new_data    = new_data,
-                h           = h,
-                actual_data = actual_data,
-                bind_actual = FALSE # Skips iterative rowwise binding of actual_data
+                new_data      = new_data,
+                h             = h,
+                actual_data   = actual_data,
+                keep_data     = keep_data,
+                arrange_index = arrange_index,
+                bind_actual   = FALSE # Skips iterative rowwise binding of actual_data
             )
 
     }
@@ -268,7 +326,8 @@ modeltime_forecast.mdl_time_tbl <- function(object, new_data = NULL, h = NULL, a
     # ADD CONF INTERVALS ----
     if (!is.null(conf_interval)) {
         ret <- ret %>%
-            safe_conf_interval_map(data_calibration, conf_interval = conf_interval)
+            safe_conf_interval_map(data_calibration, conf_interval = conf_interval) %>%
+            dplyr::relocate(dplyr::starts_with(".conf_"), .after = .value)
     }
 
     # REMOVE ANY EXTRA-ACTUAL DATA ----
@@ -282,7 +341,7 @@ modeltime_forecast.mdl_time_tbl <- function(object, new_data = NULL, h = NULL, a
 
 # SAFE FORECAST MAPPERS ----
 
-safe_modeltime_forecast_map <- function(data, new_data = NULL, h = NULL, actual_data = NULL, bind_actual = TRUE, ...) {
+safe_modeltime_forecast_map <- function(data, new_data = NULL, h = NULL, actual_data = NULL, bind_actual = TRUE, keep_data = FALSE, arrange_index = FALSE, ...) {
 
     safe_modeltime_forecast <- purrr::safely(mdl_time_forecast, otherwise = NA, quiet = FALSE)
 
@@ -297,7 +356,9 @@ safe_modeltime_forecast_map <- function(data, new_data = NULL, h = NULL, actual_
                     new_data      = new_data,
                     h             = h,
                     actual_data   = actual_data,
-                    bind_actual   = bind_actual
+                    bind_actual   = bind_actual,
+                    keep_data     = keep_data,
+                    arrange_index = arrange_index
                 )
 
                 err <- ret$error
@@ -385,12 +446,12 @@ centered_residuals <- function(data_1, data_2, conf_interval) {
 #' @keywords internal
 #'
 #' @export
-mdl_time_forecast <- function(object, calibration_data, new_data = NULL, h = NULL, actual_data = NULL, bind_actual = TRUE, ...) {
+mdl_time_forecast <- function(object, calibration_data, new_data = NULL, h = NULL, actual_data = NULL, bind_actual = TRUE, keep_data = FALSE, arrange_index = FALSE, ...) {
     UseMethod("mdl_time_forecast", object)
 }
 
 #' @export
-mdl_time_forecast.model_fit <- function(object, calibration_data, new_data = NULL, h = NULL, actual_data = NULL, bind_actual = TRUE, ...) {
+mdl_time_forecast.model_fit <- function(object, calibration_data, new_data = NULL, h = NULL, actual_data = NULL, bind_actual = TRUE, keep_data = FALSE, arrange_index = FALSE, ...) {
 
     calib_provided <- FALSE
     h_provided     <- FALSE
@@ -431,6 +492,10 @@ mdl_time_forecast.model_fit <- function(object, calibration_data, new_data = NUL
 
         h_provided <- TRUE
     }
+
+    # For combining new data
+    actual_data_unprocessed <- actual_data
+    new_data_unprocessed    <- new_data
 
     # Setup data for predictions
     nms_time_stamp_predictors <- timetk::tk_get_timeseries_variables(new_data)[1]
@@ -512,8 +577,8 @@ mdl_time_forecast.model_fit <- function(object, calibration_data, new_data = NUL
                 }
             }
 
-            data_formatted <- data_formatted %>%
-                dplyr::bind_rows(actual_data) %>%
+            data_formatted <- actual_data %>%
+                dplyr::bind_rows(data_formatted) %>%
                 dplyr::mutate(.pred = ifelse(is.na(.pred), !! target_sym, .pred))
 
         } else {
@@ -537,15 +602,38 @@ mdl_time_forecast.model_fit <- function(object, calibration_data, new_data = NUL
     ret <- data_formatted %>%
         dplyr::rename(.value = .pred) %>%
         dplyr::select(.key, .index, .value) %>%
-        dplyr::mutate(.key = factor(.key, levels = c("actual", "prediction"))) %>%
-        dplyr::arrange(.key, .index)
+        dplyr::mutate(.key = factor(.key, levels = c("actual", "prediction")))
+
+    # Keep Data
+    act_tbl  <- NULL
+    pred_tbl <- NULL
+    if (keep_data) {
+
+        if (!is.null(actual_data) && bind_actual) {
+            act_tbl <- ret %>%
+                dplyr::filter(.key == "actual") %>%
+                dplyr::bind_cols(actual_data_unprocessed)
+        }
+
+        pred_tbl <- ret %>%
+            dplyr::filter(.key == "prediction") %>%
+            dplyr::bind_cols(new_data_unprocessed)
+
+        ret <- dplyr::bind_rows(act_tbl, pred_tbl)
+
+    }
+
+    if (arrange_index) {
+        ret <- ret %>%
+            dplyr::arrange(.key, .index)
+    }
 
     return(ret)
 
 }
 
 #' @export
-mdl_time_forecast.workflow <- function(object, calibration_data, new_data = NULL, h = NULL, actual_data = NULL, bind_actual = TRUE, ...) {
+mdl_time_forecast.workflow <- function(object, calibration_data, new_data = NULL, h = NULL, actual_data = NULL, bind_actual = TRUE, keep_data = FALSE, arrange_index = FALSE, ...) {
 
     calib_provided <- FALSE
     h_provided     <- FALSE
@@ -596,6 +684,10 @@ mdl_time_forecast.workflow <- function(object, calibration_data, new_data = NULL
 
         h_provided <- TRUE
     }
+
+    # For combining new data
+    actual_data_unprocessed <- actual_data
+    new_data_unprocessed    <- new_data
 
     # Issue - Forge processes all recipe steps at once, so need to have outcomes
     # Reference: https://tidymodels.github.io/hardhat/articles/forge.html
@@ -736,8 +828,8 @@ mdl_time_forecast.workflow <- function(object, calibration_data, new_data = NULL
         if (!is.null(actual_data_prepped)) {
             target_sym <- rlang::sym(names(actual_data_prepped)[1])
 
-            data_formatted <- data_formatted %>%
-                dplyr::bind_rows(actual_data_prepped) %>%
+            data_formatted <- actual_data_prepped %>%
+                dplyr::bind_rows(data_formatted) %>%
                 dplyr::mutate(.pred = ifelse(is.na(.pred), !! target_sym, .pred)) %>%
                 dplyr::select(!!! rlang::syms(nms_final))
         }
@@ -748,8 +840,31 @@ mdl_time_forecast.workflow <- function(object, calibration_data, new_data = NULL
     ret <- data_formatted %>%
         dplyr::rename(.value = .pred) %>%
         dplyr::select(.key, .index, .value) %>%
-        dplyr::mutate(.key = factor(.key, levels = c("actual", "prediction"))) %>%
-        dplyr::arrange(.key, .index)
+        dplyr::mutate(.key = factor(.key, levels = c("actual", "prediction")))
+
+    # Keep Data
+    act_tbl  <- NULL
+    pred_tbl <- NULL
+    if (keep_data) {
+
+        if (!is.null(actual_data) && bind_actual) {
+            act_tbl <- ret %>%
+                dplyr::filter(.key == "actual") %>%
+                dplyr::bind_cols(actual_data_unprocessed)
+        }
+
+        pred_tbl <- ret %>%
+            dplyr::filter(.key == "prediction") %>%
+            dplyr::bind_cols(new_data_unprocessed)
+
+        ret <- dplyr::bind_rows(act_tbl, pred_tbl)
+
+    }
+
+    if (arrange_index) {
+        ret <- ret %>%
+            dplyr::arrange(.key, .index)
+    }
 
     return(ret)
 

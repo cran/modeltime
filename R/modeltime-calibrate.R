@@ -112,18 +112,21 @@ modeltime_calibrate.mdl_time_tbl <- function(object, new_data,
             dplyr::select(-.type, -.calibration_data)
     }
 
-    safe_calc_residuals <- purrr::safely(calc_residuals, otherwise = NA, quiet = quiet)
+    safe_calc_residuals <- purrr::safely(calc_residuals,
+                                         otherwise = NA, # Need NA here for plotting correctly
+                                         quiet = quiet)
 
     ret <- data %>%
         dplyr::ungroup() %>%
-        dplyr::mutate(.nested.col = purrr::map(
+        dplyr::mutate(.nested.col = purrr::map2(
             .x         = .model,
-            .f         = function(obj) {
+            .y         = .model_id,
+            .f         = function(obj, idx) {
+
                 ret <- safe_calc_residuals(
                     obj,
                     test_data = new_data
                 )
-
                 ret <- ret %>% purrr::pluck("result")
 
                 return(ret)
@@ -132,6 +135,11 @@ modeltime_calibrate.mdl_time_tbl <- function(object, new_data,
         # dplyr::select(-.model) %>%
         tidyr::unnest(cols = .nested.col)
 
+    # Stop when errors are Fatal (all calibrations fail)
+    # - Example: New levels in the testing(splits) are present
+    validate_modeltime_calibration(ret)
+
+    # Remove .nested_col - happens some model fail, but not all models
     if (".nested.col" %in% names(ret)) {
         ret <- ret %>%
             dplyr::select(-.nested.col)
@@ -142,6 +150,15 @@ modeltime_calibrate.mdl_time_tbl <- function(object, new_data,
         dplyr::mutate(.is_null = purrr::map_lgl(.calibration_data, is.null)) %>%
         dplyr::mutate(.calibration_data = ifelse(.is_null, list(NA), .calibration_data)) %>%
         dplyr::select(-.is_null)
+
+    # Alert Failures
+    if (!quiet) {
+        alert_modeltime_calibration(ret)
+    } else {
+        check_bad_type_tbl <- check_type_not_missing(ret) %>%
+            dplyr::filter(fail_check)
+        if (nrow(check_bad_type_tbl) > 0) rlang::warn("Some models failed during calibration. Re-run with `modeltime_calibrate(quiet = FALSE)` to find the exact cause.")
+    }
 
     if (!"mdl_time_tbl" %in% class(ret)) {
         class(ret) <- c("mdl_time_tbl", class(ret))
@@ -193,17 +210,31 @@ modeltime_calibrate.workflow <- function(object, new_data,
 
 mdl_time_forecast_to_residuals <- function(forecast_data, test_data, idx_var_text) {
 
+    # print("Check 1 - actual")
+    # print(forecast_data %>% dplyr::filter(.key == "actual"))
+    #
+    # print("Check 2 - predictions")
+    # print(forecast_data %>% dplyr::filter(.key == "prediction"))
+
+    # Generate Predictions
+    # - Return format: .index, actual, prediction
     predictions_tbl <- forecast_data %>%
-        tidyr::pivot_wider(names_from = .key, values_from = .value) %>%
-        tidyr::drop_na()
+        tidyr::pivot_wider(names_from = .key, values_from = .value, values_fn = list) %>%
+        tidyr::drop_na() %>%
+        tidyr::unnest(cols = c(actual, prediction))
+
+    # print("Check 3 - Predictions Table")
+    # print(predictions_tbl)
 
     # Return Residuals
     tibble::tibble(
         !!idx_var_text   := test_data %>% timetk::tk_index(),
         .actual           = predictions_tbl$actual,
-        .prediction       = predictions_tbl$prediction,
-        .residuals        = predictions_tbl$actual - predictions_tbl$prediction
-    )
+        .prediction       = predictions_tbl$prediction
+    ) %>%
+        dplyr::mutate(
+            .residuals    = .actual - .prediction
+        )
 
 }
 
@@ -232,7 +263,6 @@ calc_residuals <- function(object, test_data = NULL, ...) {
 
         idx_var_text <- timetk::tk_get_timeseries_variables(test_data)[1]
 
-        # print(is_modeltime_model(object))
         if (is_modeltime_model(object)) {
             # Is Modeltime Object
 
@@ -242,7 +272,6 @@ calc_residuals <- function(object, test_data = NULL, ...) {
             idx_resid <- timetk::tk_index(residual_tbl)
             idx_test  <- timetk::tk_index(test_data)
 
-            # print(identical(idx_resid, idx_test))
             if (all(idx_test %in% idx_resid)) {
                 # Can use Stored Residuals
                 test_metrics_tbl <- residual_tbl %>%
@@ -253,9 +282,7 @@ calc_residuals <- function(object, test_data = NULL, ...) {
                 test_metrics_tbl <- object %>%
                     mdl_time_forecast(
                         new_data      = test_data,
-                        actual_data   = test_data,
-                        conf_interval = NULL,
-                        ...
+                        actual_data   = test_data
                     ) %>%
                     mdl_time_forecast_to_residuals(
                         test_data    = test_data,
@@ -268,9 +295,7 @@ calc_residuals <- function(object, test_data = NULL, ...) {
             test_metrics_tbl <- object %>%
                 mdl_time_forecast(
                     new_data      = test_data,
-                    actual_data   = test_data,
-                    # conf_interval = NULL,
-                    ...
+                    actual_data   = test_data
                 ) %>%
                 mdl_time_forecast_to_residuals(
                     test_data    = test_data,
@@ -280,8 +305,6 @@ calc_residuals <- function(object, test_data = NULL, ...) {
         }
 
     }
-
-    # print(test_metrics_tbl)
 
     metrics_tbl <- dplyr::bind_rows(train_metrics_tbl, test_metrics_tbl)
 

@@ -10,6 +10,8 @@ modeltime_forecast(
   h = NULL,
   actual_data = NULL,
   conf_interval = 0.95,
+  keep_data = FALSE,
+  arrange_index = FALSE,
   ...
 )
 }
@@ -27,6 +29,15 @@ Extends the calibration data \code{h} periods into the future.}
 
 \item{conf_interval}{An estimated confidence interval based on the calibration data.
 This is designed to estimate future confidence from \emph{out-of-sample prediction error}.}
+
+\item{keep_data}{Whether or not to keep the \code{new_data} and \code{actual_data} as extra columns in the results.
+This can be useful if there is an important feature in the \code{new_data} and \code{actual_data} needed
+when forecasting.
+Default: \code{FALSE}.}
+
+\item{arrange_index}{Whether or not to sort the index in rowwise chronological order (oldest to newest) or to
+keep the original order of the data.
+Default: \code{FALSE}.}
 
 \item{...}{Not currently used}
 }
@@ -129,6 +140,18 @@ the difference in means.
 Refitting has no affect on the confidence interval since this is calculated independently of
 the refitted model (on data with a smaller sample size). New observations typically improve
 future accuracy, which in most cases makes the out-of-sample confidence intervals conservative.
+
+\strong{Keep Data}
+
+Include the new data (and actual data) as extra columns with the results of the model forecasts.
+This can be helpful when the new data includes information useful to the forecasts.
+An example is when forecasting \emph{Panel Data} and the new data contains
+ID features related to the time series group that the forecast belongs to.
+
+\strong{Arrange Index}
+
+By default, \code{modeltime_forecast()} keeps the original order of the data.
+If desired, the user can sort the output by \code{.key}, \code{.model_id} and \code{.index}.
 }
 \examples{
 library(tidyverse)
@@ -182,6 +205,16 @@ models_tbl \%>\%
     modeltime_forecast(
         new_data    = testing(splits),
         actual_data = m750
+    )
+
+# ---- KEEP NEW DATA WITH FORECAST ----
+# Keeps the new data. Useful if new data has information
+#  like ID features that should be kept with the forecast data
+
+calibration_tbl \%>\%
+    modeltime_forecast(
+        new_data      = testing(splits),
+        keep_data     = TRUE
     )
 
 }

@@ -4,7 +4,7 @@ knitr::opts_chunk$set(
   comment = "#>",
   message = FALSE,
   warning = FALSE,
-  out.width = '80%',
+  # out.width = '80%',
   fig.width = 5,
   fig.height = 4,
   fig.align='center'
@@ -238,7 +238,8 @@ show_model_info("decomposition_reg")
 #    options = list(
 #      predictor_indicators = "none",
 #      compute_intercept = FALSE,
-#      remove_intercept = FALSE
+#      remove_intercept = FALSE,
+#      allow_sparse_x = FALSE
 #    )
 #  )
 

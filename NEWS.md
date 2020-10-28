@@ -1,3 +1,27 @@
+# modeltime 0.3.0
+
+__Panel Data__
+
+`modeltime_forecast()` upgrades: 
+
+- `keep_data`: Gains a new argument `keep_data`. This is useful when the `new_data` and `actual_data` has important information needed in analyzing the forecast.
+- `arrange_index`: Gains a new argument `arrange_index`. By default, the forecast keeps the rows in the same order as the incoming data. Prior versions arranged Model Predictions by `.index`, which impacts the users ability to match to Panel Data which is not likely to be arranged by date. Prediction best-practices are to keep the original order of the data, which 
+will be preserved by default. To get the old behavior, simply toggle `arrange_index = TRUE`. 
+
+`modeltime_calibrate()`: Can now handle panel data.
+
+`modeltime_accuracy()`: Can now handle panel data. 
+
+`plot_modeltime_forecast()`: Can handle panel data provided the data is grouped by an ID column prior to plotting. 
+
+__Error Messaging__
+
+- __Calibration:__ Improve error messaging during calibration. Provide warnings if models fail. Provide report with `modeltime_calibrate(quiet = FALSE)`.
+
+__Compatibility__
+
+- Compatibility with `parsnip >= 0.1.4`. Uses `set_encodings()` new parameter `allow_sparse_x`. 
+
 # modeltime 0.2.1
 
 __Ensembles__
