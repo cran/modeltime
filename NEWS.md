@@ -1,3 +1,14 @@
+# modeltime 0.4.0
+
+__New Functions__
+
+- `recursive()`: Turn a fitted model into a recursive predictor. (#49, #50)
+- `update_modeltime_model()`: New function to update a modeltime model inside a Modeltime Table. 
+
+__Breaking Changes__
+
+- Removed `arima_workflow_tuned` dataset. 
+
 # modeltime 0.3.1
 
 `as_modeltime_table()`: New function to convert one or more fitted models stored in a `list` to a Modeltime Table. 
@@ -5,6 +16,8 @@
 __Bug Fixes__
 
 - Update `m750_models`: Fixes error "R parsnip Error: Internal error: Unknown `composition` type."
+
+
 
 # modeltime 0.3.0
 
