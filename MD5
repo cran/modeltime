@@ -1,7 +1,7 @@
-9b83587f7cc4fc6d2c64b37647481ac2 *DESCRIPTION
+63a76dd249268ce85d6ce55bca260cea *DESCRIPTION
 55fbacaffa937c2e0b77ccf2330cad32 *LICENSE
-704cbb7acbf10b9501f7e9a6bb0dc5a9 *NAMESPACE
-f2b5145fde9615ab6c845c94793cd854 *NEWS.md
+365dff303da43bcdd248c0746ac141c3 *NAMESPACE
+918b0dd96a32b0a718de9376ae23a7f8 *NEWS.md
 12d507030d8b2607e85179df3240be6e *R/00_global_variables.R
 9600b782b890aea93c5acd79e0d0ce0b *R/data.R
 1ae4dd6bd720a87062b55019dc8955f3 *R/dev-constructor.R
@@ -11,7 +11,7 @@ b5984a089537213ba318573f8f0c5c47 *R/dev-parse_index.R
 fb48efe60dce93d3111e78d4a2b657e7 *R/dials-arima_params.R
 1ba2785e306d9fcd30f3a1fd4178afcf *R/dials-ets_params.R
 5ea6ca58323f25a8df33c429b7d9bfab *R/dials-nnetar_params.R
-df2071a555b9824ad9c46b50b4def0e5 *R/dials-prophet_params.R
+e10c7bc15d716bee7b1a09a20588829b *R/dials-prophet_params.R
 43260f05d267cb8f4f6f453a0235fe59 *R/dials-ts_params.R
 bbd7e4856ee654c37f04a6ab1b337983 *R/helpers-modeltime_residuals.R
 ee98a6ce6a8af8b1849ac5f472fd2f8a *R/helpers-modeltime_table.R
@@ -21,7 +21,7 @@ d6b4ac6471bbb3a309a2ad5db703409e *R/modeltime-calibrate.R
 e3ee39440765dab086c3d0c565300eac *R/modeltime-forecast-plot.R
 8bb1ebfcee77a6b98dbea0e8d9a2725f *R/modeltime-forecast.R
 2c28b9d5ad2056548196ab5fcd83feac *R/modeltime-recursive.R
-d6585467312a9e9667c673dfc11a503d *R/modeltime-refit.R
+58031074b6d06e000387b8f31f92d70b *R/modeltime-refit.R
 cb03eb7e332c9e1075d0f2a2f60e5bcc *R/modeltime-residuals-plot.R
 2969b22488a6b46ca7b927359fd76017 *R/modeltime-residuals.R
 b560ccf24caebb892dc1aa7024f7149d *R/modeltime-table.R
@@ -47,7 +47,7 @@ b16dbc282cf0015b3b187e6486c37ee7 *R/utils-checks-validations.R
 2e508d20855891f6aeb51fb3d0cca628 *R/utils-tidy-eval.R
 f1512f49ae35c1a36a2b89731a413bd0 *R/utils-xgboost.R
 34af2cf3f32ed4b3809450e8fac82ab2 *R/zzz.R
-0bc76e52dd94e95711c5ca250b3c246a *README.md
+b0d2a2efc8e4720e9f70f0d3e1b93561 *README.md
 8f924f5762311b846335c39a6cc83849 *build/vignette.rds
 9c5574972334d56fa1685b08ef6aed39 *data/m750.rda
 2152acb2e27c440ebd8f01aa1a7bdfcc *data/m750_models.rda
@@ -55,10 +55,10 @@ ab8bb8f77ce4575d1c77e5f3e4a15705 *data/m750_splits.rda
 cce428ae5150fe6bb2e93de9b811148d *data/m750_training_resamples.rda
 3a55e7dbd735373625e75d41a6865bb9 *inst/doc/extending-modeltime.R
 f4f2704bf05634b125271ae05f5b6811 *inst/doc/extending-modeltime.Rmd
-fe0668c2ffe8e67fd21af1b903dab889 *inst/doc/extending-modeltime.html
+8e9ca7ac96537ab580c1947ae9621835 *inst/doc/extending-modeltime.html
 458dfc63caa130b350d63a0b25a433a2 *inst/doc/getting-started-with-modeltime.R
 a37b04e64234054220aabe160ddaa043 *inst/doc/getting-started-with-modeltime.Rmd
-b95cac1989a5dd458e6c5ec8687a29b4 *inst/doc/getting-started-with-modeltime.html
+90fc0d7df74cbe797bcc022a4659f61a *inst/doc/getting-started-with-modeltime.html
 93a3149cadd5e78b8410cd50a026dc2f *man/Arima_fit_impl.Rd
 2ab98f784189e776fe956fb5ebfbbb57 *man/Arima_predict_impl.Rd
 88c7bc48afa3963ddce23cbda5c38e94 *man/add_modeltime_model.Rd
