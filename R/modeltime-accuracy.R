@@ -74,7 +74,7 @@ modeltime_accuracy <- function(object, new_data = NULL,
                                quiet = TRUE, ...) {
     if (!is_calibrated(object)) {
        if (is.null(new_data)) {
-           rlang::abort("Modeltime Table must be calibrated (see 'modeltime_calbirate()') or include 'new_data'.")
+           rlang::abort("Modeltime Table must be calibrated (see 'modeltime_calibrate()') or include 'new_data'.")
        }
     }
 
@@ -143,6 +143,8 @@ modeltime_accuracy.mdl_time_tbl <- function(object, new_data = NULL,
 #' accuracy metrics included. These are the default time series accuracy
 #' metrics used with [modeltime_accuracy()].
 #'
+#' @param ... Add additional `yardstick` metrics
+#'
 #' @details
 #'
 #' The primary purpose is to use the default accuracy metrics to calculate the following
@@ -177,14 +179,15 @@ modeltime_accuracy.mdl_time_tbl <- function(object, new_data = NULL,
 #'
 #' @export
 #' @importFrom yardstick mae mape mase smape rmse rsq
-default_forecast_accuracy_metric_set <- function() {
+default_forecast_accuracy_metric_set <- function(...) {
     yardstick::metric_set(
         mae,
         mape,
         mase,
         smape,
         rmse,
-        rsq
+        rsq,
+        ...
     )
 }
 
@@ -224,16 +227,70 @@ default_forecast_accuracy_metric_set <- function() {
 #' @export
 summarize_accuracy_metrics <- function(data, truth, estimate, metric_set) {
 
+    data_tbl <- data
+
     truth_expr    <- rlang::enquo(truth)
     estimate_expr <- rlang::enquo(estimate)
 
     metric_summarizer_fun <- metric_set
 
-    data %>%
+    group_nms <- dplyr::group_vars(data_tbl)
+
+    data_tbl %>%
         metric_summarizer_fun(!! truth_expr, !! estimate_expr) %>%
         dplyr::select(-.estimator) %>%
-        # mutate(.metric = toupper(.metric)) %>%
-        tidyr::pivot_wider(names_from = .metric, values_from = .estimate)
+
+        dplyr::group_by(!!! rlang::syms(group_nms)) %>%
+        dplyr::mutate(.metric = make.unique(.metric, sep = "_")) %>%
+        dplyr::ungroup() %>%
+
+        tidyr::pivot_wider(
+            names_from  = .metric,
+            values_from = .estimate
+        )
+
+}
+
+# METRIC TWEAK ----
+
+#' Modify Yardstick Metric Functions
+#'
+#' Used to modify functions like `mase()`, which have parameters that
+#' need to be adjusted (e.g. `m = 1`) based on the seasonality of the data.
+#'
+#' @param .f A yardstick function (e.g. `mase`)
+#' @param ... Parameters to overload (.e.g. `m = 1`)
+#'
+#' @examples
+#' library(modeltime)
+#' library(yardstick)
+#' library(tibble)
+#' library(purrr)
+#'
+#' fake_data <- tibble(
+#'     y    = c(1:12, 2*1:12),
+#'     yhat = c(1 + 1:12, 2*1:12 - 1)
+#' )
+#'
+#' my_metric_set <- default_forecast_accuracy_metric_set(
+#'     metric_tweak(mase, m = 12)
+#' )
+#' my_metric_set
+#'
+#' my_metric_set(fake_data, y, yhat)
+#'
+#'
+#'
+#' @export
+metric_tweak <- function(.f, ...) {
+
+    f_attrs <- attributes(.f)
+
+    ret <- purrr::partial(.f = .f, ...)
+
+    attributes(ret) <- f_attrs
+
+    return(ret)
 
 }
 
@@ -251,7 +308,11 @@ calc_accuracy_2 <- function(train_data = NULL, test_data = NULL, metric_set, ...
     if (!is.null(test_data)) {
 
         test_metrics_tbl <- test_data %>%
-            summarize_accuracy_metrics(truth = .actual, estimate = .prediction, metric_set = metrics) %>%
+            summarize_accuracy_metrics(
+                truth      = .actual,
+                estimate   = .prediction,
+                metric_set = metrics
+            ) %>%
             dplyr::ungroup()
 
     }

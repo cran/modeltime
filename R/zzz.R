@@ -29,4 +29,8 @@
 
     # NNETAR
     make_nnetar_reg()
+
+    # BASELINE MODELS
+    make_window_reg()
+    make_naive_reg()
 }

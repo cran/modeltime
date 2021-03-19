@@ -1,3 +1,23 @@
+# modeltime 0.4.2
+
+### New Algorithms
+
+Baseline algorithms (#5, #37) have been created for comparing high-performance methods with simple forecasting methods. 
+
+- `window_reg`: Window-based methods such as mean, median, and even more complex seasonal models based on a forecasting window. 
+- `naive_reg`: NAIVE and Seasonal NAIVE (SNAIVE) Regression Models
+
+### Modeltime Residual Tests
+
+A new function is added `modeltime_residuals_test()` (#62, #68). Tests are implemented:
+
+- Shapiro Test - Test for Normality of residuals
+- Box-Pierce, Ljung-Box, and Durbin-Watson Tests - Test for Autocorrelation of residuals
+
+### Fixes
+
+- `plot_modeltime_forecast()` - When plotting a single point forecast, `plot_modeltime_forecast()` now uses `geom_point()` instead of `geom_line()`. Fixes #66. 
+
 # modeltime 0.4.1 
 
 __Fixes__
