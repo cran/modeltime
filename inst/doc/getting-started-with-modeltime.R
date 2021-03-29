@@ -19,6 +19,7 @@ knitr::include_graphics("forecast_plot.jpg")
 knitr::include_graphics("modeltime_workflow.jpg")
 
 ## -----------------------------------------------------------------------------
+library(xgboost)
 library(tidymodels)
 library(modeltime)
 library(tidyverse)

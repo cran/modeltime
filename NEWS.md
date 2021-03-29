@@ -1,11 +1,27 @@
+# 0.5.0
+
+### Recursive Predictions
+
+- `recursive()` (#71) - Received a full upgrade to work with Panel Data. 
+- __New Vignette__: "Recursive Forecasting" with Modeltime
+
+### Breaking Changes
+
+- Deprecating `modeltime::metric_tweak()` for `yardstick::metric_tweak()`. The `yardstick::metric_tweak()` has a required `.name` argument in addition to `.fn`, which is needed for tuning. 
+
 # modeltime 0.4.2
 
 ### New Algorithms
 
 Baseline algorithms (#5, #37) have been created for comparing high-performance methods with simple forecasting methods. 
 
-- `window_reg`: Window-based methods such as mean, median, and even more complex seasonal models based on a forecasting window. 
+- `window_reg`: Window-based methods such as mean, median, and even more complex seasonal models based on a forecasting window. The main tuning parameter is `window_size`.  
 - `naive_reg`: NAIVE and Seasonal NAIVE (SNAIVE) Regression Models
+
+### Yardstick Helpers
+
+- `metric_tweak()` - Can modify `yardstick` metrics like `mase()`, which have seasonal parameters. 
+- `default_forecast_accuracy_metric_set()` - Gets a `...` parameter that allows us to add more metrics beyond the defaults. 
 
 ### Modeltime Residual Tests
 

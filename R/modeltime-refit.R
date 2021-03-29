@@ -191,22 +191,7 @@ mdl_time_refit.default <- function(object, data, ..., control = NULL) {
 #' @export
 mdl_time_refit.workflow <- function(object, data, ..., control = NULL) {
 
-    model_spec    <- object %>% workflows::pull_workflow_spec()
-    model_preproc <- object %>% workflows::pull_workflow_preprocessor()
-
-    if (inherits(model_preproc, "formula")) {
-        # Formula preprocessor
-        ret <- workflows::workflow() %>%
-            workflows::add_model(model_spec) %>%
-            workflows::add_formula(model_preproc) %>%
-            fit(data)
-    } else {
-        # Recipe preprocessor
-        ret <- workflows::workflow() %>%
-            workflows::add_model(model_spec) %>%
-            workflows::add_recipe(model_preproc) %>%
-            fit(data)
-    }
+    ret <- object %>% fit(data)
 
     return(ret)
 
@@ -261,6 +246,79 @@ mdl_time_refit.recursive <- function(object, data, ..., control = NULL) {
 
         # Make Recursive
         object <- recursive(object, transform = transformer, train_tail = train_tail_new)
+
+        # Need to overwrite transformer
+        object$fit$fit$spec$transform <- transformer
+
+    }
+
+    return(object)
+
+
+}
+
+
+#' @export
+mdl_time_refit.recursive_panel <- function(object, data, ..., control = NULL) {
+
+    if (inherits(object, "model_fit")) {
+
+        # Swap out train_tail
+        train_tail_old <- object$spec$train_tail
+
+        n <- object$spec$train_tail %>%
+            dplyr::count(dplyr::all_of(object$spec$id)) %>%
+            dplyr::pull(n) %>%
+            stats::median(na.rm = TRUE)
+
+        object$spec$train_tail <- data %>%
+            panel_tail(
+                id = !! object$spec$id,
+                n  = n
+            )
+
+        # Refit
+        object <- mdl_time_refit.model_fit(object, data, ..., control = control)
+
+        # Reconstruct class
+        .class        <- class(object)
+        class(object) <- c(.class[1], "recursive_panel", .class[2])
+
+
+    } else {
+
+        # Get transformer
+        transformer <- object$fit$fit$spec$transform
+
+        # Create new train tail
+        train_tail_old <- object$fit$fit$spec$train_tail
+
+        # print("Spec ID")
+        # print(object$fit$fit$spec$id)
+
+        n <- object$fit$fit$spec$train_tail %>%
+            dplyr::count(dplyr::all_of(object$fit$fit$spec$id)) %>%
+            dplyr::pull(n) %>%
+            stats::median(na.rm = TRUE)
+
+        train_tail_new <- data %>%
+            panel_tail(
+                id = !! object$fit$fit$spec$id,
+                n  = n
+            )
+
+        id_old <- object$fit$fit$spec$id
+
+        # Refit
+        object <- mdl_time_refit.workflow(object, data, ..., control = control)
+
+        # Make Recursive
+        object <- recursive(
+            object,
+            transform  = transformer,
+            train_tail = train_tail_new,
+            id         = id_old
+        )
 
         # Need to overwrite transformer
         object$fit$fit$spec$transform <- transformer

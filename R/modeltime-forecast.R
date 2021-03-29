@@ -504,10 +504,27 @@ mdl_time_forecast.model_fit <- function(object, calibration_data, new_data = NUL
         dplyr::select(!! rlang::sym(nms_time_stamp_predictors)) %>%
         dplyr::rename(.index = !! rlang::sym(nms_time_stamp_predictors))
 
-    # PREDICTIONS
+    # PREDICTIONS ----
+
+    # Comment this out ----
+    # obj <<- object
+    # print({
+    #     list(
+    #         object   = object,
+    #         class    = class(object),
+    #         new_data = new_data
+    #     )
+    # })
 
     modeltime_forecast <- tryCatch({
-        predictions_tbl <- object %>% stats::predict(new_data = new_data)
+
+        if (inherits(object, "_elnet") && inherits(object, "recursive")) {
+            predictions_tbl <- object %>% predict.recursive(new_data = new_data)
+        } else if (inherits(object, "_elnet") && inherits(object, "recursive_panel")) {
+            predictions_tbl <- object %>% predict.recursive_panel(new_data = new_data)
+        } else {
+            predictions_tbl <- object %>% stats::predict(new_data = new_data)
+        }
 
         modeltime_forecast <- predictions_tbl %>%
             dplyr::bind_cols(time_stamp_predictors_tbl)
@@ -743,7 +760,14 @@ mdl_time_forecast.workflow <- function(object, calibration_data, new_data = NULL
         }
     }
 
-    # FORGE NEW DATA
+    # FORGE NEW DATA -----
+
+    # Fix - When ID is dummied
+    id <- object$fit$fit$spec$id
+    df_id <- NULL
+    if (!is.null(id)) {
+        df_id = new_data %>% dplyr::select(dplyr::all_of(id))
+    }
 
     # Issue - hardhat::forge defaults to outcomes = FALSE, which creates an error at predict.workflow()
     blueprint <- object$pre$mold$blueprint
@@ -751,9 +775,40 @@ mdl_time_forecast.workflow <- function(object, calibration_data, new_data = NULL
     new_data  <- forged$predictors
     fit       <- object$fit$fit
 
+    # PREDICTIONS ----
+
+    # Comment this out ----
+    # obj <<- object
+    # print({
+    #     list(
+    #         object   = object,
+    #         class    = class(object),
+    #         new_data = new_data,
+    #         id       = id,
+    #         df_id    = df_id
+    #     )
+    # })
+
+    # Fix - When ID is dummied
+    df <- new_data
+    if (!is.null(id)) {
+        if (!id %in% names(new_data)) {
+            df <- new_data %>%
+                dplyr::bind_cols(df_id)
+            fit$spec$remove_id <- TRUE
+        }
+    }
+
     # PREDICT
-    data_formatted <- fit %>%
-        stats::predict(new_data = new_data) %>%
+    if (inherits(fit, "_elnet") && inherits(fit, "recursive")) {
+        data_formatted <- fit %>% predict.recursive(new_data = df)
+    } else if (inherits(fit, "_elnet") && inherits(fit, "recursive_panel")) {
+        data_formatted <- fit %>% predict.recursive_panel(new_data = df)
+    } else {
+        data_formatted <- fit %>% stats::predict(new_data = df)
+    }
+
+    data_formatted <- data_formatted %>%
         dplyr::bind_cols(time_stamp_predictors_tbl) %>%
         dplyr::mutate(.key = "prediction") %>%
         dplyr::select(.key, dplyr::everything())
