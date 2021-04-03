@@ -266,13 +266,17 @@ recursive.workflow <- function(object, transform, train_tail, id = NULL, ...) {
     object
 }
 
+
+
 #' @export
 print.recursive <- function(x, ...) {
 
     if (inherits(x, "model_fit")) {
         cat("Recursive [parsnip model]\n\n")
-    } else {
+    } else if (inherits(x, "workflow")) {
         cat("Recursive [workflow]\n\n")
+    } else {
+       cat("Recursive [modeltime ensemble]\n\n")
     }
 
     y <- x
@@ -286,8 +290,10 @@ print.recursive_panel <- function(x, ...) {
 
     if (inherits(x, "model_fit")) {
         cat("Recursive [parsnip model]\n\n")
-    } else {
+    } else if (inherits(x, "workflow")) {
         cat("Recursive [workflow]\n\n")
+    } else {
+        cat("Recursive [modeltime ensemble]\n\n")
     }
 
     y <- x
@@ -616,6 +622,14 @@ panel_tail <- function(data, id, n){
 
 # HELPERS ----
 
+#' Prepare Recursive Transformations
+#'
+#' @param .transform A transformation function
+#'
+#' @return A function that applies a recursive transformation
+#'
+#' @rdname dot_prepare_transform
+#' @export
 .prepare_transform <- function(.transform) {
 
     if (inherits(.transform, "recipe")) {
@@ -648,20 +662,24 @@ panel_tail <- function(data, id, n){
     .transform_fun
 }
 
+#' @rdname dot_prepare_transform
+#' @export
 .prepare_panel_transform <- function(.transform) {
 
     if (inherits(.transform, "function")) {
 
         .transform_fun <- function(temp_new_data, new_data_size, slice_idx, id) {
 
-            id <- as.character(id)
-            id <- dplyr::ensym(id)
+            id_chr <- as.character(id)
+            ..id   <- dplyr::ensym(id_chr)
+
+            # print(.transform(temp_new_data))
 
             .transform(temp_new_data) %>%
 
                 tibble::rowid_to_column(var = "..row_id") %>%
 
-                dplyr::group_by(!! id) %>%
+                dplyr::group_by(!! ..id) %>%
                 dplyr::group_split() %>%
                 purrr::map(function(x){
 

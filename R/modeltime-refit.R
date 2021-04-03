@@ -267,7 +267,7 @@ mdl_time_refit.recursive_panel <- function(object, data, ..., control = NULL) {
         train_tail_old <- object$spec$train_tail
 
         n <- object$spec$train_tail %>%
-            dplyr::count(dplyr::all_of(object$spec$id)) %>%
+            dplyr::count(!! rlang::sym(object$spec$id)) %>%
             dplyr::pull(n) %>%
             stats::median(na.rm = TRUE)
 
@@ -297,7 +297,7 @@ mdl_time_refit.recursive_panel <- function(object, data, ..., control = NULL) {
         # print(object$fit$fit$spec$id)
 
         n <- object$fit$fit$spec$train_tail %>%
-            dplyr::count(dplyr::all_of(object$fit$fit$spec$id)) %>%
+            dplyr::count(!! rlang::sym(object$fit$fit$spec$id)) %>%
             dplyr::pull(n) %>%
             stats::median(na.rm = TRUE)
 

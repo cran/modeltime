@@ -1,7 +1,7 @@
-3f84a0375a141ca7661ffb49a7754c22 *DESCRIPTION
+d77de660b7f3a2b0404c91f089de3d6a *DESCRIPTION
 55fbacaffa937c2e0b77ccf2330cad32 *LICENSE
-dfa93bd2e58bae0155b869b8c5ab753a *NAMESPACE
-74c3bcacbbba387e372ca52fee1ed2ab *NEWS.md
+b7ea8231a8cba860e7194e3784f581c2 *NAMESPACE
+7ddf09b6087b121e69419c292149ed08 *NEWS.md
 bba0d5fe5342ae759e1e6f68f42b279c *R/00_global_variables.R
 9600b782b890aea93c5acd79e0d0ce0b *R/data.R
 1ae4dd6bd720a87062b55019dc8955f3 *R/dev-constructor.R
@@ -19,9 +19,9 @@ a574fbd9684e78c40dd87cccf2422b43 *R/modeltime-accuracy-table.R
 2ca5b5aa40f1d898b36b8308722d9f99 *R/modeltime-accuracy.R
 d6b4ac6471bbb3a309a2ad5db703409e *R/modeltime-calibrate.R
 aec50a1810ba7eec67498d63e78518fa *R/modeltime-forecast-plot.R
-df1828f3e44528df83d0ffc0402a6b9f *R/modeltime-forecast.R
-539a936908aada8ef738691217d337f5 *R/modeltime-recursive.R
-42eef4fc209e9084ae53c9164cc78b5f *R/modeltime-refit.R
+2f97e7928d5700afe7f2fef810448827 *R/modeltime-forecast.R
+f9db586ac8ab3dc04b2885f4c29efc4c *R/modeltime-recursive.R
+011159fdfd5bf3b4932fd539b06e77b7 *R/modeltime-refit.R
 cb03eb7e332c9e1075d0f2a2f60e5bcc *R/modeltime-residuals-plot.R
 2ac756e1210150f117154ba9f9529b3a *R/modeltime-residuals-tests.R
 a203e745c7a0d8abba274100fda70560 *R/modeltime-residuals.R
@@ -48,7 +48,7 @@ ddf3464b2b511918816f93448d070114 *R/tibble-type_sum.R
 b16dbc282cf0015b3b187e6486c37ee7 *R/utils-checks-validations.R
 3368b9d36851318ff6455b477d033776 *R/utils-is_modeltime.R
 65594f6a6970b47179f8273e061ebc49 *R/utils-make_grouped_predictions.R
-31e0b363c91587c4d887089800c2015a *R/utils-parsnip-helpers.R
+fc35e5ca6967437dc02e8b3c2015aeb4 *R/utils-parsnip-helpers.R
 65cef5e0674056f6fc07dd2b3ca85c13 *R/utils-pipe.R
 2e508d20855891f6aeb51fb3d0cca628 *R/utils-tidy-eval.R
 f1512f49ae35c1a36a2b89731a413bd0 *R/utils-xgboost.R
@@ -61,7 +61,7 @@ ab8bb8f77ce4575d1c77e5f3e4a15705 *data/m750_splits.rda
 cce428ae5150fe6bb2e93de9b811148d *data/m750_training_resamples.rda
 3815d2e1beff7f614e1c7e63608d7469 *inst/doc/getting-started-with-modeltime.R
 bfc6afbbd71591a0cc1b2a96bb57fae0 *inst/doc/getting-started-with-modeltime.Rmd
-0307f875e9e01a9c7808451375f0affd *inst/doc/getting-started-with-modeltime.html
+09acf88b103370a9fa2646e02b5fdc63 *inst/doc/getting-started-with-modeltime.html
 93a3149cadd5e78b8410cd50a026dc2f *man/Arima_fit_impl.Rd
 2ab98f784189e776fe956fb5ebfbbb57 *man/Arima_predict_impl.Rd
 88c7bc48afa3963ddce23cbda5c38e94 *man/add_modeltime_model.Rd
@@ -75,6 +75,7 @@ a7e31f497f30425ba2a5bdf2f8dfb572 *man/auto_arima_xgboost_fit_impl.Rd
 6252ff2ac76992e414aacebde337da0d *man/combine_modeltime_tables.Rd
 ebcea3ca7fef84baf4fcc1abaeb77e99 *man/create_xreg_recipe.Rd
 22d0bf3ca604c0a170aff686125dac70 *man/default_forecast_accuracy_metric_set.Rd
+98f72312af7c276a838c2f16b68e41b0 *man/dot_prepare_transform.Rd
 2d72c20dbe2ec78ff5744e81f9a9660c *man/ets_fit_impl.Rd
 cf3e5bf27b81d23615a66b1546b39211 *man/ets_predict_impl.Rd
 6d5696ae6c3132663e418e3738ffc853 *man/exp_smoothing.Rd
@@ -188,5 +189,5 @@ bf982eb52e74bb26a1fc9ac330316f17 *vignettes/recursive_panel_forecast.png
 64eb5f12c77e969c5d31cec50e53b7e6 *vignettes/refit_tbl.rds
 f4f2704bf05634b125271ae05f5b6811 *vignettes/temp/extending-modeltime.Rmd
 ed3474b17a4b869484365cafce116f12 *vignettes/temp/modeltime-model-list.Rmd
-bac34649c95124659402f90ccb72eec2 *vignettes/temp/recursive-forecasting.Rmd
+12070639873d10f9a96e8271dbb0d937 *vignettes/temp/recursive-forecasting.Rmd
 d8a79526f4aee29d8da924c107978fbc *vignettes/time_series_course.jpg
