@@ -16,7 +16,7 @@ resample_spec <- time_series_cv(data = m750,
 # 1. ARIMA BOOST ----
 test_that("Tuning, arima_boost", {
 
-    # skip_on_cran()
+    skip_on_cran()
 
     # Recipe
     recipe_spec <- recipe(value ~ date, data = m750) %>%
@@ -36,15 +36,14 @@ test_that("Tuning, arima_boost", {
         seasonal_ma              = 0,
 
         # XGBoost Tuning Params
-        min_n      = tune(),
-        learn_rate = tune()
+        min_n      = tune()
     ) %>%
         set_engine("arima_xgboost")
 
     # Grid
     set.seed(3)
     grid_spec <- grid_latin_hypercube(
-        parameters(min_n(), learn_rate()),
+        parameters(min_n()),
         size = 3
     )
 
@@ -56,8 +55,9 @@ test_that("Tuning, arima_boost", {
             resamples = resample_spec,
             grid      = grid_spec,
             metrics   = metric_set(mae, mape, smape, mase, rmse, rsq),
-            control   = control_grid(verbose = FALSE)
+            control   = control_grid(verbose = FALSE, allow_par = TRUE)
         )
+
 
     # structure
     expect_equal(ncol(tune_results_boosted), 4)

@@ -1,15 +1,54 @@
-# 0.5.1 Development Version
+# modeltime 0.6.9000 (Development Version)
+
+# modeltime 0.6.0 
+
+### Workflowset Integration
+
+`modeltime_fit_workflowset()` (#85) makes it easy to convert `workflow_set` objects to Modeltime Tables (`mdl_time_tbl`). Requires a refitting process that can now be performed in parallel or in sequence. 
+
+
+### New Algorithms
+
+- CROSTON (#5, #98) - This is a new engine that has been added to `exp_smoothing()`. 
+- THETA (#5, #93) - This is a new engine that has been added to `exp_smoothing()`.
+
+### New Dials Parameters
+
+`exp_smoothing()` gained 3 new tunable parameters:
+
+- `smooth_level()`: This is often called the "alpha" parameter used as the base level smoothing factor for exponential smoothing models.
+- `smooth_trend()`: This is often called the "beta" parameter used as the trend smoothing factor for exponential smoothing models.
+- `smooth_seasonal()`: This is often called the "gamma" parameter used as the seasonal smoothing factor for exponential smoothing models.
+
+### Parallel Processing
+
+- `modeltime_refit()`: supports parallel processing. See `control_refit()` 
+- `modeltime_fit_workflowset()`: supports parallel processing. See `control_workflowset()` 
+
+### Updates for parsnip >= 0.1.5.9003
+
+- `boost_tree(mtry)`: Mapping switched from `colsample_bytree` to `colsample_bynode`. `prophet_boost()` and `arima_boost()` have been updated to reflect this change.  https://github.com/tidymodels/parsnip/pull/499
+
+### General Improvements
+
+- Improve Model Description of Recursive Models (#96)
+
+### Potential Breaking Changes
+
+- We've added new parameters to Exponential Smoothing Models. `exp_smoothing()` models produced in prior versions may require refitting with `modeltime_refit()` to upgrade their internals with the new parameters. 
+
+# modeltime 0.5.1 
 
 ### Recursive Ensemble Predictions
 
-- Add support for `recursive()` for ensembles. 
+- Add support for `recursive()` for ensembles. The new recursive ensemble functionality is in `modeltime.ensemble` >= 0.3.0.9000.
 
-# 0.5.0
+# modeltime 0.5.0
 
 ### Recursive Panel Predictions
 
 - `recursive()` (#71) - Received a full upgrade to work with Panel Data. 
-- __New Vignette__: "Recursive Forecasting" with Modeltime
+- __New Vignette__: ["Autoregressive Forecasting with Recursive"](https://business-science.github.io/modeltime/articles/recursive-forecasting.html)
 
 ### Breaking Changes
 

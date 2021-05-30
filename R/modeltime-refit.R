@@ -8,9 +8,16 @@
 #'
 #' @param object A Modeltime Table
 #' @param data A `tibble` that contains data to retrain the model(s) using.
-#' @param control Under construction. Will be used to control refitting.
-#' @param ... Under construction. Additional arguments to control refitting.
+#' @param ... Additional arguments to control refitting.
 #'
+#'  __Ensemble Model Spec (`modeltime.ensemble`):__
+#'
+#'    When making a meta-learner with `modeltime.ensemble::ensemble_model_spec()`,
+#'    used to pass `resamples` argument containing results
+#'    from `modeltime.resample::modeltime_fit_resamples()`.
+#'
+#' @param control Used to control verbosity and parallel processing.
+#'  See [control_refit()].
 #'
 #' @return
 #' A Modeltime Table containing one or more re-trained models.
@@ -37,7 +44,8 @@
 #'
 #' The XY format is not supported at this time.
 #'
-#'
+#' @seealso
+#' [control_refit()]
 #'
 #'
 #' @examples
@@ -86,53 +94,31 @@ NULL
 
 #' @export
 #' @rdname modeltime_refit
-modeltime_refit <- function(object, data, ..., control = NULL) {
+modeltime_refit <- function(object, data, ..., control = control_refit()) {
     UseMethod("modeltime_refit", object)
 }
 
 #' @export
-modeltime_refit.mdl_time_tbl <- function(object, data, ..., control = NULL) {
+modeltime_refit.mdl_time_tbl <- function(object, data, ..., control = control_refit()) {
 
     new_data <- data
     data     <- object # object is a Modeltime Table
+
+    # Backwards compatibility
+    if (is.null(control)) control <- control_refit()
 
     # Save current model descriptions
     model_desc_user_vec          <- object$.model_desc
     model_desc_modeltime_old_vec <- object$.model %>% purrr::map_chr(get_model_description)
 
-    # Safely refit
-    safe_modeltime_refit <- purrr::safely(mdl_time_refit, otherwise = NULL, quiet = FALSE)
+    # Parallel or Sequential
+    if ((control$cores > 1) && control$allow_par) {
+        ret <- modeltime_refit_parallel(object, data = new_data, control = control, ...)
+    } else {
+        ret <- modeltime_refit_sequential(object, data = new_data, control = control, ...)
+    }
 
-    # Implement progressr for progress reporting
-    p <- progressr::progressor(steps = nrow(data))
-
-    ret <- data %>%
-        dplyr::ungroup() %>%
-        dplyr::mutate(.model = purrr::map2(
-            .x         = .model,
-            .y         = .model_id,
-            .f         = function(obj, id) {
-
-                p(stringr::str_glue("Model ID = {id} / {max(data$.model_id)}"))
-
-                ret <- safe_modeltime_refit(
-                    obj,
-                    data    = new_data,
-                    control = control,
-                    ...
-                )
-
-                ret <- ret %>% purrr::pluck("result")
-
-                return(ret)
-            })
-        )
-
-    validate_models_are_not_null(ret)
-
-    # Safely refit
-    # safe_get_model_description <- purrr::safely(get_model_description, otherwise = "TODO", quiet = FALSE)
-
+    validate_models_are_not_null(ret, msg_main = "Some models failed during fitting: modeltime_refit()")
 
     # Get new Model Descriptions
     ret <- ret %>%
@@ -158,6 +144,162 @@ modeltime_refit.mdl_time_tbl <- function(object, data, ..., control = NULL) {
     return(ret)
 
 }
+
+modeltime_refit_sequential <- function(object, data, ..., control) {
+
+    new_data <- data
+    data     <- object # object is a Modeltime Table
+
+    # Safely refit
+    safe_modeltime_refit <- purrr::safely(mdl_time_refit, otherwise = NULL, quiet = TRUE)
+
+    ret <- data %>%
+        dplyr::ungroup() %>%
+        dplyr::mutate(.model = purrr::map2(
+            .x         = .model,
+            .y         = .model_id,
+            .f         = function(obj, id) {
+
+                if (control$verbose) {
+                    cli::cli_alert_info(cli::col_grey("Refitting Model: Model ID {id}"))
+                }
+
+                ret <- safe_modeltime_refit(
+                    obj,
+                    data    = new_data,
+                    control = control,
+                    ...
+                )
+
+                res <- ret %>% purrr::pluck("result")
+
+                if (!is.null(ret$error)) message(stringr::str_glue("Model {id} Error: {ret$error}"))
+
+                if (control$verbose) {
+                    if (is.null(res)) {
+                        cli::cli_alert_danger(cli::col_grey("Model Failed Refitting: Model ID {id}"))
+                    } else {
+                        cli::cli_alert_success(cli::col_grey("Model Successfully Refitted: Model ID {id}"))
+                    }
+                }
+
+                return(res)
+            })
+        )
+
+    return(ret)
+
+}
+
+modeltime_refit_parallel <- function(object, data, ..., control) {
+
+    new_data <- data
+    data     <- object # object is a Modeltime Table
+
+    is_par_setup <- foreach::getDoParWorkers() > 1
+
+    # If parallel processing is not set up, set up parallel backend
+    if ((control$cores > 1) && control$allow_par && (!is_par_setup)){
+        if (control$verbose) message(stringr::str_glue("Starting parallel backend with {control$cores} clusters (cores)..."))
+        cl <- parallel::makeCluster(control$cores)
+        doParallel::registerDoParallel(cl)
+        parallel::clusterCall(cl, function(x) .libPaths(x), .libPaths())
+    } else if (!is_par_setup) {
+        # Run sequentially if parallel is not set up, cores == 1 or allow_par == FALSE
+        if (control$verbose) message(stringr::str_glue("Running sequential backend. If parallel was intended, set `allow_par = TRUE` and `cores > 1`."))
+        foreach::registerDoSEQ()
+    } else {
+        # Parallel was set up externally by user - Do nothing.
+        if (control$verbose) message(stringr::str_glue("Using existing parallel backend with {foreach::getDoParWorkers()} clusters (cores)..."))
+    }
+
+    get_operator <- function(allow_par = TRUE) {
+        is_par <- foreach::getDoParWorkers() > 1
+
+        cond <- allow_par && is_par
+        if (cond) {
+            res <- foreach::`%dopar%`
+        } else {
+            res <- foreach::`%do%`
+        }
+        return(res)
+    }
+
+    `%op%` <- get_operator(allow_par = control$allow_par)
+
+    # Safely refit
+    safe_modeltime_refit <- purrr::safely(mdl_time_refit, otherwise = NULL, quiet = FALSE)
+
+    ret <- data %>% dplyr::ungroup()
+
+    mod_list <- foreach::foreach(
+            id                  = ret$.model_id,
+            .inorder            = TRUE,
+            .packages           = control$packages,
+            .verbose            = FALSE
+        ) %op% {
+
+            model <- ret %>%
+                dplyr::filter(.model_id == id) %>%
+                dplyr::select(.model) %>%
+                dplyr::pull()
+
+            mod <- safe_modeltime_refit(model[[1]], new_data, control = control)
+
+            res <- mod %>%
+                purrr::pluck("result")
+
+            err <- mod %>%
+                purrr::pluck("error")
+
+            return(list(res = res, err = err))
+
+        }
+
+    # Collect models
+    models <- mod_list %>% purrr::map(~ .x$res)
+
+    # Collect errors
+    error_messages <- mod_list %>% purrr::map(~ .x$err)
+    purrr::iwalk(
+        error_messages,
+        function (e, id) {
+            if (!is.null(e)) message(stringr::str_glue("Model {id} Error: {e}"))
+        }
+    )
+
+    # Recombine models with modeltime table
+    ret <- ret %>%
+        dplyr::mutate(.model = models)
+
+
+    # Finish Parallel Backend. Close clusters if we set up internally.
+    if ((control$cores > 1) && control$allow_par && (!is_par_setup)) {
+        # We set up parallel processing internally. We should close.
+        doParallel::stopImplicitCluster()
+        parallel::stopCluster(cl)
+        foreach::registerDoSEQ()
+        if (control$verbose) {
+            message("Finishing parallel backend. Closing clusters.")
+
+        }
+    } else if ((control$cores > 1) && control$allow_par) {
+        if (control$verbose) {
+            message("Finishing parallel backend. Clusters are remaining open. Close clusters by running: `foreach::registerDoSEQ()`")
+        }
+    } else {
+        if (control$verbose) {
+            message("Finishing sequential backend.")
+        }
+    }
+
+    return(ret)
+
+}
+
+
+
+
 
 # #' @export
 # modeltime_refit_xy.mdl_time_tbl <- function(object, x, y, ..., control = NULL) {
@@ -330,7 +472,147 @@ mdl_time_refit.recursive_panel <- function(object, data, ..., control = NULL) {
 
 }
 
+# CONTROL REFIT ----
 
+
+#' Control aspects of the `modeltime_refit()` process.
+#'
+#' @param allow_par Logical to allow parallel computation. Default: `FALSE` (single threaded).
+#' @param cores Number of cores for computation. If -1, uses all available physical cores.
+#'  Default: `-1`.
+#' @param packages An optional character string of additional R package names that should be loaded
+#'  during parallel processing.
+#'
+#'  - Packages in your namespace are loaded by default
+#'
+#'  - Key Packages are loaded by default: `tidymodels`, `parsnip`, `modeltime`, `dplyr`, `stats`, `lubridate` and `timetk`.
+#'
+#' @param verbose Logical to control printing.
+#'
+#' @return
+#' A List with the control settings.
+#'
+#' @seealso
+#' [modeltime_refit()]
+#'
+#' @export
+control_refit <- function(verbose = FALSE,
+                          allow_par = FALSE,
+                          cores = -1,
+                          packages = NULL) {
+
+    ret <- control_modeltime_objects(
+        verbose   = verbose,
+        allow_par = allow_par,
+        cores     = cores,
+        packages  = packages
+    )
+
+    class(ret) <- c("control_refit")
+
+    return(ret)
+}
+
+#' @export
+print.control_refit <- function(x, ...) {
+    cat("refit control object\n")
+    invisible(x)
+}
+
+
+# val_class_and_single
+#
+#' These are not intended for use by the general public.
+#'
+#' @param x An object
+#' @param cls A character vector of possible classes
+#' @param where A character string for the calling function
+#'
+#' @return
+#' Control information
+
+#' @export
+val_class_and_single <- function (x, cls = "numeric", where = NULL) {
+    cl <- match.call()
+    fine <- check_class_and_single(x, cls)
+    cls <- paste(cls, collapse = " or ")
+    if (!fine) {
+        msg <- glue::glue("Argument '{deparse(cl$x)}' should be a single {cls} value")
+        if (!is.null(where)) {
+            msg <- glue::glue(msg, " in `{where}`")
+        }
+        rlang::abort(msg)
+    }
+    invisible(NULL)
+}
+
+# check_class_and_single
+#
+#' These are not intended for use by the general public.
+#'
+#' @param x An object
+#' @param cls A character vector of possible classes
+#'
+#' @return
+#' Control information
+
+#' @export
+check_class_and_single <- function (x, cls = "numeric") {
+    isTRUE(inherits(x, cls) & length(x) == 1)
+}
+
+# check_class_integer
+#
+#' These are not intended for use by the general public.
+#'
+#' @param x A number
+#'
+#' @return
+#' A logical value
+
+#' @export
+check_class_integer <- function(x){
+    if (x %% 1 == 0) TRUE else FALSE
+}
+
+# load_namespace
+#
+#' These are not intended for use by the general public.
+#'
+#' @param x A vector
+#' @param full_load A vector
+#'
+#' @return
+#' Control information
+
+#' @export
+load_namespace <- function(x, full_load) {
+    if (length(x) == 0) {
+        return(invisible(TRUE))
+    }
+
+    x_full <- x[x %in% full_load]
+    x <- x[!(x %in% full_load)]
+
+    loaded <- purrr::map_lgl(x, isNamespaceLoaded)
+    x <- x[!loaded]
+
+    if (length(x) > 0) {
+        did_load <- purrr::map_lgl(x, requireNamespace, quietly = TRUE)
+        if (any(!did_load)) {
+            bad <- x[!did_load]
+            msg <- paste0("'", bad, "'", collapse = ", ")
+            stop(paste("These packages could not be loaded:", msg), call. = FALSE)
+        }
+    }
+
+    if (length(x_full) > 0) {
+        purrr::map(x_full,
+                   ~ try(suppressPackageStartupMessages(attachNamespace(.x)), silent = TRUE))
+    }
+
+    invisible(TRUE)
+}
 
 # # REFIT XY ----
 #

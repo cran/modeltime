@@ -18,9 +18,7 @@ library(yardstick)
 library(slider)
 
 library(timetk)
-# library(modeltime)
-
-library(progressr)
+library(modeltime)
 
 library(tidyverse)
 library(lubridate)
