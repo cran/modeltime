@@ -147,11 +147,19 @@ modeltime_refit.mdl_time_tbl <- function(object, data, ..., control = control_re
 
 modeltime_refit_sequential <- function(object, data, ..., control) {
 
+    t1 <- Sys.time()
+
     new_data <- data
     data     <- object # object is a Modeltime Table
 
     # Safely refit
     safe_modeltime_refit <- purrr::safely(mdl_time_refit, otherwise = NULL, quiet = TRUE)
+
+    # BEGIN LOOP
+    # if (control$verbose) {
+    #     t <- Sys.time()
+    #     message(stringr::str_glue(" Beginning Sequential Loop | {round(t-t1, 3)} seconds"))
+    # }
 
     ret <- data %>%
         dplyr::ungroup() %>%
@@ -187,16 +195,26 @@ modeltime_refit_sequential <- function(object, data, ..., control) {
             })
         )
 
+    # PRINT TOTAL TIME
+    if (control$verbose) {
+        t <- Sys.time()
+        message(stringr::str_glue("Total time | {round(t-t1, 3)} seconds"))
+    }
+
     return(ret)
 
 }
 
 modeltime_refit_parallel <- function(object, data, ..., control) {
 
+    t1 <- Sys.time()
+
     new_data <- data
     data     <- object # object is a Modeltime Table
 
     is_par_setup <- foreach::getDoParWorkers() > 1
+
+    clusters_made <- FALSE
 
     # If parallel processing is not set up, set up parallel backend
     if ((control$cores > 1) && control$allow_par && (!is_par_setup)){
@@ -204,6 +222,13 @@ modeltime_refit_parallel <- function(object, data, ..., control) {
         cl <- parallel::makeCluster(control$cores)
         doParallel::registerDoParallel(cl)
         parallel::clusterCall(cl, function(x) .libPaths(x), .libPaths())
+        clusters_made <- TRUE
+
+        if (control$verbose) {
+            t <- Sys.time()
+            message(stringr::str_glue(" Parallel Backend Setup | {round(t-t1, 3)} seconds"))
+        }
+
     } else if (!is_par_setup) {
         # Run sequentially if parallel is not set up, cores == 1 or allow_par == FALSE
         if (control$verbose) message(stringr::str_glue("Running sequential backend. If parallel was intended, set `allow_par = TRUE` and `cores > 1`."))
@@ -231,6 +256,12 @@ modeltime_refit_parallel <- function(object, data, ..., control) {
     safe_modeltime_refit <- purrr::safely(mdl_time_refit, otherwise = NULL, quiet = FALSE)
 
     ret <- data %>% dplyr::ungroup()
+
+    # BEGIN LOOP
+    if (control$verbose) {
+        t <- Sys.time()
+        message(stringr::str_glue(" Beginning Parallel Loop | {round(t-t1, 3)} seconds"))
+    }
 
     mod_list <- foreach::foreach(
             id                  = ret$.model_id,
@@ -274,23 +305,30 @@ modeltime_refit_parallel <- function(object, data, ..., control) {
 
 
     # Finish Parallel Backend. Close clusters if we set up internally.
-    if ((control$cores > 1) && control$allow_par && (!is_par_setup)) {
+    t <- Sys.time()
+    if (clusters_made) {
         # We set up parallel processing internally. We should close.
         doParallel::stopImplicitCluster()
         parallel::stopCluster(cl)
         foreach::registerDoSEQ()
         if (control$verbose) {
-            message("Finishing parallel backend. Closing clusters.")
-
+            message(stringr::str_glue(" Finishing parallel backend. Closing clusters. | {round(t-t1, 3)} seconds)"))
         }
     } else if ((control$cores > 1) && control$allow_par) {
         if (control$verbose) {
-            message("Finishing parallel backend. Clusters are remaining open. Close clusters by running: `foreach::registerDoSEQ()`")
+            message(stringr::str_glue(" Finishing parallel backend. Clusters are remaining open. | {round(t-t1, 3)} seconds"))
+            message(" Close clusters by running: `parallel_stop()`.")
         }
     } else {
         if (control$verbose) {
-            message("Finishing sequential backend.")
+            message(stringr::str_glue(" Finishing sequential backend. | {round(t-t1, 3)} seconds"))
         }
+    }
+
+    # PRINT TOTAL TIME
+    if (control$verbose) {
+        t <- Sys.time()
+        message(stringr::str_glue(" Total time | {round(t-t1, 3)} seconds"))
     }
 
     return(ret)
@@ -472,147 +510,7 @@ mdl_time_refit.recursive_panel <- function(object, data, ..., control = NULL) {
 
 }
 
-# CONTROL REFIT ----
 
-
-#' Control aspects of the `modeltime_refit()` process.
-#'
-#' @param allow_par Logical to allow parallel computation. Default: `FALSE` (single threaded).
-#' @param cores Number of cores for computation. If -1, uses all available physical cores.
-#'  Default: `-1`.
-#' @param packages An optional character string of additional R package names that should be loaded
-#'  during parallel processing.
-#'
-#'  - Packages in your namespace are loaded by default
-#'
-#'  - Key Packages are loaded by default: `tidymodels`, `parsnip`, `modeltime`, `dplyr`, `stats`, `lubridate` and `timetk`.
-#'
-#' @param verbose Logical to control printing.
-#'
-#' @return
-#' A List with the control settings.
-#'
-#' @seealso
-#' [modeltime_refit()]
-#'
-#' @export
-control_refit <- function(verbose = FALSE,
-                          allow_par = FALSE,
-                          cores = -1,
-                          packages = NULL) {
-
-    ret <- control_modeltime_objects(
-        verbose   = verbose,
-        allow_par = allow_par,
-        cores     = cores,
-        packages  = packages
-    )
-
-    class(ret) <- c("control_refit")
-
-    return(ret)
-}
-
-#' @export
-print.control_refit <- function(x, ...) {
-    cat("refit control object\n")
-    invisible(x)
-}
-
-
-# val_class_and_single
-#
-#' These are not intended for use by the general public.
-#'
-#' @param x An object
-#' @param cls A character vector of possible classes
-#' @param where A character string for the calling function
-#'
-#' @return
-#' Control information
-
-#' @export
-val_class_and_single <- function (x, cls = "numeric", where = NULL) {
-    cl <- match.call()
-    fine <- check_class_and_single(x, cls)
-    cls <- paste(cls, collapse = " or ")
-    if (!fine) {
-        msg <- glue::glue("Argument '{deparse(cl$x)}' should be a single {cls} value")
-        if (!is.null(where)) {
-            msg <- glue::glue(msg, " in `{where}`")
-        }
-        rlang::abort(msg)
-    }
-    invisible(NULL)
-}
-
-# check_class_and_single
-#
-#' These are not intended for use by the general public.
-#'
-#' @param x An object
-#' @param cls A character vector of possible classes
-#'
-#' @return
-#' Control information
-
-#' @export
-check_class_and_single <- function (x, cls = "numeric") {
-    isTRUE(inherits(x, cls) & length(x) == 1)
-}
-
-# check_class_integer
-#
-#' These are not intended for use by the general public.
-#'
-#' @param x A number
-#'
-#' @return
-#' A logical value
-
-#' @export
-check_class_integer <- function(x){
-    if (x %% 1 == 0) TRUE else FALSE
-}
-
-# load_namespace
-#
-#' These are not intended for use by the general public.
-#'
-#' @param x A vector
-#' @param full_load A vector
-#'
-#' @return
-#' Control information
-
-#' @export
-load_namespace <- function(x, full_load) {
-    if (length(x) == 0) {
-        return(invisible(TRUE))
-    }
-
-    x_full <- x[x %in% full_load]
-    x <- x[!(x %in% full_load)]
-
-    loaded <- purrr::map_lgl(x, isNamespaceLoaded)
-    x <- x[!loaded]
-
-    if (length(x) > 0) {
-        did_load <- purrr::map_lgl(x, requireNamespace, quietly = TRUE)
-        if (any(!did_load)) {
-            bad <- x[!did_load]
-            msg <- paste0("'", bad, "'", collapse = ", ")
-            stop(paste("These packages could not be loaded:", msg), call. = FALSE)
-        }
-    }
-
-    if (length(x_full) > 0) {
-        purrr::map(x_full,
-                   ~ try(suppressPackageStartupMessages(attachNamespace(.x)), silent = TRUE))
-    }
-
-    invisible(TRUE)
-}
 
 # # REFIT XY ----
 #

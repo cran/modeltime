@@ -1,4 +1,18 @@
-# modeltime 0.6.9000 (Development Version)
+# modeltime 0.6.1 
+
+__Parallel Processing__
+
+- New Vignette: [Parallel Processing](https://business-science.github.io/modeltime/articles/parallel-processing.html)
+
+- `parallel_start()` and `parallel_stop()`: Helpers for setting up multicore processing. 
+
+- `create_model_grid()`: Helper to generate model specifications with filled-in parameters from a parameter grid (e.g. `dials::grid_regular()`).
+
+- `control_refit()` and `control_fit_workflowset()`: Better printing. 
+
+__Bug Fixes__
+
+- Issue #110: Fix bug with `cores > cores_available`.
 
 # modeltime 0.6.0 
 
@@ -25,7 +39,7 @@
 - `modeltime_refit()`: supports parallel processing. See `control_refit()` 
 - `modeltime_fit_workflowset()`: supports parallel processing. See `control_workflowset()` 
 
-### Updates for parsnip >= 0.1.5.9003
+### Updates for parsnip >= 0.1.6
 
 - `boost_tree(mtry)`: Mapping switched from `colsample_bytree` to `colsample_bynode`. `prophet_boost()` and `arima_boost()` have been updated to reflect this change.  https://github.com/tidymodels/parsnip/pull/499
 
