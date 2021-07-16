@@ -10,6 +10,7 @@
 #' 2. A workflow that has been fit by [fit.workflow()] or
 #' 3. A parsnip model that has been fit using [fit.model_spec()]
 #' @param new_data A test data set `tibble` containing future information (timestamps and actual values).
+#' @param id A quoted column name containing an identifier column identifying time series that are grouped.
 #' @param quiet Hide errors (`TRUE`, the default), or display them as they occur?
 #' @param ... Additional arguments passed to [modeltime_forecast()].
 #'
@@ -28,9 +29,13 @@
 #'
 #' 1. If not a Modeltime Table, objects are converted to Modeltime Tables internally
 #' 2. Two Columns are added:
-#'   - `.type`: Indicates the sample type. Only "Test" is currently available.
-#'   - `.calibration_data`: Contains a tibble with Timestamps, Actual Values, Predictions and Residuals
-#'    calculated from `new_data` (Test Data)
+#'   - `.type`: Indicates the sample type. This is:
+#'      - "Test" if predicted, or
+#'      - "Fitted" if residuals were stored during modeling.
+#'   - `.calibration_data`:
+#'      - Contains a tibble with Timestamps, Actual Values, Predictions and Residuals
+#'        calculated from `new_data` (Test Data)
+#'      - If `id` is provided, will contain a 5th column that is the identifier variable.
 #'
 #'
 #' @examples
@@ -63,7 +68,9 @@
 #' # ---- CALIBRATE ----
 #'
 #' calibration_tbl <- models_tbl %>%
-#'     modeltime_calibrate(new_data = testing(splits))
+#'     modeltime_calibrate(
+#'         new_data = testing(splits)
+#'     )
 #'
 #' # ---- ACCURACY ----
 #'
@@ -84,7 +91,7 @@ NULL
 
 #' @export
 #' @rdname modeltime_calibrate
-modeltime_calibrate <- function(object, new_data,
+modeltime_calibrate <- function(object, new_data, id = NULL,
                                 quiet = TRUE, ...) {
 
     # Checks
@@ -92,17 +99,32 @@ modeltime_calibrate <- function(object, new_data,
         glubort("Missing 'new_data'. Try adding a test data set using rsample::testing(splits). See help for more info: ?modeltime_calibrate ")
     }
 
+    # Check `id` is in `new_data` names
+    if (!is.null(id)) {
+
+        tryCatch({
+            id
+        }, error = function(e) {
+            rlang::abort("`id` must be a quoted character string that is the name of an identifier column. ")
+        })
+
+        if (!is.character(id)) rlang::abort("`id` must be a quoted character string that is the name of an identifier column. ")
+
+        if (!id %in% names(new_data)) glubort("`id` is not a valid column name in `new_data`. Please review column names: {stringr::str_c(names(new_data), collapse = ', ')}")
+
+    }
+
     UseMethod("modeltime_calibrate")
 }
 
 #' @export
-modeltime_calibrate.default <- function(object, new_data,
+modeltime_calibrate.default <- function(object, new_data, id = NULL,
                                         quiet = TRUE, ...) {
     glubort("Received an object of class: {class(object)[1]}. Expected an object of class:\n 1. 'workflow' - That has been fitted (trained).\n 2. 'model_fit' - A fitted parsnip model.\n 3. 'mdl_time_tbl' - A Model Time Table made with 'modeltime_table()'.")
 }
 
 #' @export
-modeltime_calibrate.mdl_time_tbl <- function(object, new_data,
+modeltime_calibrate.mdl_time_tbl <- function(object, new_data, id = NULL,
                                              quiet = TRUE, ...) {
     data <- object
 
@@ -125,7 +147,8 @@ modeltime_calibrate.mdl_time_tbl <- function(object, new_data,
 
                 ret <- safe_calc_residuals(
                     obj,
-                    test_data = new_data
+                    test_data = new_data,
+                    id        = id
                 )
                 ret <- ret %>% purrr::pluck("result")
 
@@ -168,13 +191,13 @@ modeltime_calibrate.mdl_time_tbl <- function(object, new_data,
 }
 
 #' @export
-modeltime_calibrate.model_spec <- function(object, new_data,
+modeltime_calibrate.model_spec <- function(object, new_data, id = NULL,
                                            quiet = TRUE, ...) {
     rlang::abort("Model spec must be trained using the 'fit()' function.")
 }
 
 #' @export
-modeltime_calibrate.model_fit <- function(object, new_data,
+modeltime_calibrate.model_fit <- function(object, new_data, id = NULL,
                                           quiet = TRUE, ...) {
 
     ret <- modeltime_table(object) %>%
@@ -187,7 +210,7 @@ modeltime_calibrate.model_fit <- function(object, new_data,
 }
 
 #' @export
-modeltime_calibrate.workflow <- function(object, new_data,
+modeltime_calibrate.workflow <- function(object, new_data, id = NULL,
                                          quiet = TRUE, ...) {
 
     # Checks
@@ -208,7 +231,7 @@ modeltime_calibrate.workflow <- function(object, new_data,
 
 # UTILITIES ----
 
-mdl_time_forecast_to_residuals <- function(forecast_data, test_data, idx_var_text) {
+mdl_time_forecast_to_residuals <- function(forecast_data, test_data, idx_var_text, id_var_text = NULL) {
 
     # print("Check 1 - actual")
     # print(forecast_data %>% dplyr::filter(.key == "actual"))
@@ -227,7 +250,7 @@ mdl_time_forecast_to_residuals <- function(forecast_data, test_data, idx_var_tex
     # print(predictions_tbl)
 
     # Return Residuals
-    tibble::tibble(
+    ret <- tibble::tibble(
         !!idx_var_text   := test_data %>% timetk::tk_index(),
         .actual           = predictions_tbl$actual,
         .prediction       = predictions_tbl$prediction
@@ -235,6 +258,15 @@ mdl_time_forecast_to_residuals <- function(forecast_data, test_data, idx_var_tex
         dplyr::mutate(
             .residuals    = .actual - .prediction
         )
+
+    if (!is.null(id_var_text)) {
+        ret <- ret %>%
+            dplyr::mutate(
+                !! rlang::ensym(id_var_text) := test_data %>% dplyr::pull(!! rlang::ensym(id_var_text))
+            )
+    }
+
+    return(ret)
 
 }
 
@@ -248,7 +280,7 @@ mdl_time_residuals_to_calibration <- function(residuals_data, .type = "Test") {
 
 }
 
-calc_residuals <- function(object, test_data = NULL, ...) {
+calc_residuals <- function(object, test_data = NULL, id = NULL, ...) {
 
     model_fit <- object
 
@@ -274,8 +306,17 @@ calc_residuals <- function(object, test_data = NULL, ...) {
 
             if (all(idx_test %in% idx_resid)) {
                 # Can use Stored Residuals
+
+                # TODO - Add id variable
+                residual_tbl <- residual_tbl %>%
+                    dplyr::filter(!! sym(idx_var_text) %in% idx_test)
+
+                if (!is.null(id)) {
+                    residual_tbl <- residual_tbl %>%
+                        dplyr::mutate(!! rlang::ensym(id) := test_data %>% dplyr::pull(!! rlang::ensym(id)))
+                }
+
                 test_metrics_tbl <- residual_tbl %>%
-                    dplyr::filter(!! sym(idx_var_text) %in% idx_test) %>%
                     mdl_time_residuals_to_calibration(.type = "Fitted")
             } else {
                 # Cannot use Stored Residuals
@@ -286,7 +327,8 @@ calc_residuals <- function(object, test_data = NULL, ...) {
                     ) %>%
                     mdl_time_forecast_to_residuals(
                         test_data    = test_data,
-                        idx_var_text = idx_var_text
+                        idx_var_text = idx_var_text,
+                        id_var_text  = id
                     ) %>%
                     mdl_time_residuals_to_calibration(.type = "Test")
             }
@@ -299,7 +341,8 @@ calc_residuals <- function(object, test_data = NULL, ...) {
                 ) %>%
                 mdl_time_forecast_to_residuals(
                     test_data    = test_data,
-                    idx_var_text = idx_var_text
+                    idx_var_text = idx_var_text,
+                    id_var_text  = id
                 ) %>%
                 mdl_time_residuals_to_calibration(.type = "Test")
         }

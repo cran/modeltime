@@ -77,8 +77,11 @@ modeltime_fit_workflowset_sequential <- function(object, data, control, ...) {
 
     t1 <- Sys.time()
 
+    .models  <- object %>%
+        dplyr::mutate(wflow_id = forcats::as_factor(wflow_id)) %>%
+        dplyr::group_by(wflow_id) %>%
+        dplyr::group_split()
 
-    .models  <- object %>% split(.$wflow_id)
     safe_fit <- purrr::safely(parsnip::fit, otherwise = NULL, quiet = TRUE)
 
     # Setup progress
@@ -138,13 +141,24 @@ modeltime_fit_workflowset_parallel <- function(object, data, control, ...) {
 
     is_par_setup <- foreach::getDoParWorkers() > 1
 
-    .models <- object %>% split(.$wflow_id)
+    # .models <- object %>% split(.$wflow_id)
+    .models  <- object %>%
+        dplyr::mutate(wflow_id = forcats::as_factor(wflow_id)) %>%
+        dplyr::group_by(wflow_id) %>%
+        dplyr::group_split()
 
     clusters_made <- FALSE
 
     # If parallel processing is not set up, set up parallel backend
     if ((control$cores > 1) && control$allow_par && (!is_par_setup)){
-        if (control$verbose) message(stringr::str_glue("Starting parallel backend with {control$cores} clusters (cores)..."))
+        if (control$verbose) {
+            message(
+                stringr::str_glue(" No existing backend detected. It's more efficient to setup a Parallel Backend with `parallel_start()`...")
+            )
+            message(
+                stringr::str_glue(" Starting parallel backend with {control$cores} clusters (cores)...")
+            )
+        }
         cl <- parallel::makeCluster(control$cores)
         doParallel::registerDoParallel(cl)
         parallel::clusterCall(cl, function(x) .libPaths(x), .libPaths())

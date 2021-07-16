@@ -8,7 +8,10 @@
 #'  different packages. Currently the only package is `forecast`. Several algorithms are implemented:
 #'
 #'  - ETS - Automated Exponential Smoothing
-#'  - CROSTON - Croston's forecast for intermittent demand
+#'  - CROSTON - Croston's forecast is a special case
+#'     of Exponential Smoothing for intermittent demand
+#'  - Theta - A special case of Exponential Smoothing with Drift that
+#'     performed well in the M3 Competition
 #'
 #' @param mode A single character string for the type of model.
 #'  The only possible value for this model is "regression".
@@ -180,8 +183,9 @@
 #'     fit(log(value) ~ date, data = training(splits))
 #' model_fit
 #'
-#' # ---- CROSTON ----
 #'
+#' # ---- CROSTON ----
+#' \donttest{
 #' # Model Spec
 #' model_spec <- exp_smoothing(
 #'         smooth_level = 0.2
@@ -192,10 +196,12 @@
 #' model_fit <- model_spec %>%
 #'     fit(log(value) ~ date, data = training(splits))
 #' model_fit
+#' }
+#'
 #'
 #'
 #' # ---- THETA ----
-#'
+#' \donttest{
 #' #' # Model Spec
 #' model_spec <- exp_smoothing() %>%
 #'     set_engine("theta")
@@ -204,6 +210,7 @@
 #' model_fit <- model_spec %>%
 #'     fit(log(value) ~ date, data = training(splits))
 #' model_fit
+#' }
 #'
 #' @export
 exp_smoothing <- function(mode = "regression", seasonal_period = NULL,

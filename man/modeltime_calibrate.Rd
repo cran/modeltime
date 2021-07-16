@@ -4,7 +4,7 @@
 \alias{modeltime_calibrate}
 \title{Preparation for forecasting}
 \usage{
-modeltime_calibrate(object, new_data, quiet = TRUE, ...)
+modeltime_calibrate(object, new_data, id = NULL, quiet = TRUE, ...)
 }
 \arguments{
 \item{object}{A fitted model object that is either:
@@ -15,6 +15,8 @@ modeltime_calibrate(object, new_data, quiet = TRUE, ...)
 }}
 
 \item{new_data}{A test data set \code{tibble} containing future information (timestamps and actual values).}
+
+\item{id}{A quoted column name containing an identifier column identifying time series that are grouped.}
 
 \item{quiet}{Hide errors (\code{TRUE}, the default), or display them as they occur?}
 
@@ -42,9 +44,17 @@ The calibration steps include:
 \item Two Columns are added:
 }
 \itemize{
-\item \code{.type}: Indicates the sample type. Only "Test" is currently available.
-\item \code{.calibration_data}: Contains a tibble with Timestamps, Actual Values, Predictions and Residuals
+\item \code{.type}: Indicates the sample type. This is:
+\itemize{
+\item "Test" if predicted, or
+\item "Fitted" if residuals were stored during modeling.
+}
+\item \code{.calibration_data}:
+\itemize{
+\item Contains a tibble with Timestamps, Actual Values, Predictions and Residuals
 calculated from \code{new_data} (Test Data)
+\item If \code{id} is provided, will contain a 5th column that is the identifier variable.
+}
 }
 }
 \examples{
@@ -77,7 +87,9 @@ models_tbl <- modeltime_table(
 # ---- CALIBRATE ----
 
 calibration_tbl <- models_tbl \%>\%
-    modeltime_calibrate(new_data = testing(splits))
+    modeltime_calibrate(
+        new_data = testing(splits)
+    )
 
 # ---- ACCURACY ----
 

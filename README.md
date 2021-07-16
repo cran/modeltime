@@ -17,6 +17,17 @@ coverage](https://codecov.io/gh/business-science/modeltime/branch/master/graph/b
 
 > Tidy time series forecasting with `tidymodels`.
 
+## Modeltime in Minutes (YouTube)
+
+<a href="https://www.youtube.com/watch?v=-bCelif-ENY" target="_blank">
+<img src="http://img.youtube.com/vi/-bCelif-ENY/0.jpg"
+alt="Introduction to Modeltime" width="100%" height="350"/>
+<p style="text-align:center">
+(Click to Watch on YouTube)
+</p>
+
+</a>
+
 ## Tutorials
 
 -   [**Getting Started with
@@ -35,13 +46,13 @@ coverage](https://codecov.io/gh/business-science/modeltime/branch/master/graph/b
 CRAN version:
 
 ``` r
-install.packages("modeltime")
+install.packages("modeltime", dependencies = TRUE)
 ```
 
 Development version:
 
 ``` r
-remotes::install_github("business-science/modeltime")
+remotes::install_github("business-science/modeltime", dependencies = TRUE)
 ```
 
 ## Why modeltime?

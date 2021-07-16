@@ -49,7 +49,10 @@ before fitting and allows the model to be created using
 different packages. Currently the only package is \code{forecast}. Several algorithms are implemented:
 \itemize{
 \item ETS - Automated Exponential Smoothing
-\item CROSTON - Croston's forecast for intermittent demand
+\item CROSTON - Croston's forecast is a special case
+of Exponential Smoothing for intermittent demand
+\item Theta - A special case of Exponential Smoothing with Drift that
+performed well in the M3 Competition
 }
 }
 \details{
@@ -217,8 +220,9 @@ model_fit <- model_spec \%>\%
     fit(log(value) ~ date, data = training(splits))
 model_fit
 
-# ---- CROSTON ----
 
+# ---- CROSTON ----
+\donttest{
 # Model Spec
 model_spec <- exp_smoothing(
         smooth_level = 0.2
@@ -229,10 +233,12 @@ model_spec <- exp_smoothing(
 model_fit <- model_spec \%>\%
     fit(log(value) ~ date, data = training(splits))
 model_fit
+}
+
 
 
 # ---- THETA ----
-
+\donttest{
 #' # Model Spec
 model_spec <- exp_smoothing() \%>\%
     set_engine("theta")
@@ -241,6 +247,7 @@ model_spec <- exp_smoothing() \%>\%
 model_fit <- model_spec \%>\%
     fit(log(value) ~ date, data = training(splits))
 model_fit
+}
 
 }
 \seealso{
