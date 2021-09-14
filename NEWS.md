@@ -1,4 +1,55 @@
-# modeltime 0.7.0 (Development Version)
+# modeltime 1.0.0
+
+### New Feature: Nested (Iterative) Forecasting
+
+__Nested (Iterative) Forecasting__ is aimed at making it easier to perform forecasting that is traditionally done in a _for-loop_ with models like ARIMA, Prophet, and Exponential Smoothing. Functionality has been added to:
+
+#### Format data in a Nested Time Series structure
+
+- __Data Preparation Utilities:__ `extend_timeseries()`, `nest_timeseries()`, and `split_nested_timeseris()`.
+
+#### Nested Model Fitting (Train/Test)
+
+- __`modeltime_nested_fit()`:__ Fits many models to nested time series data and organizes in a "Nested Modeltime Table". Logs Accuracy, Errors, and Test Forecasts. 
+
+- __`control_nested_fit()`:__ Used to control the fitting process including verbosity and parallel processing. 
+
+- __Logging Extractors:__ Functions that retrieve logged information from the initial fitting process. `extract_nested_test_accuracy()`, `extract_nested_error_report()`, and `extract_nested_test_forecast()`.
+
+#### Nested Model Selection
+
+- __`modeltime_nested_select_best()`__: Selects the best model for each time series ID. 
+
+- __Logging Extractors:__ Functions that retrieve logged information from the model selection process. `extract_nested_best_model_report()`
+
+
+#### Nested Model Refitting (Actual Data)
+
+- __`modeltime_nested_refit()`:__ Refits to the `.future_data`. Logs Future Forecasts. 
+
+- __`control_nested_refit()`:__ Used to control the re-fitting process including verbosity and parallel processing. 
+
+- __Logging Extractors:__ Functions that retrieve logged information from the re-fitting process. `extract_nested_future_forecast()`.
+
+### New Vignette
+
+- [Nested Forecasting](https://business-science.github.io/modeltime/articles/nested-forecasting.html) 
+
+### Vignette Improvements
+
+- [Forecasting with Global Models](https://business-science.github.io/modeltime/articles/modeling-panel-data.html): Added more complete steps in the forecasting process so now user can see how to forecast each step from start to finish including future forecasting.  
+
+
+### New Accuracy Metric Set and Yardstick Functions
+
+- `extended_forecast_accuracy_metric_set()`: Adds the new MAAPE metric for handling intermittent data when MAPE returns Inf. 
+- `maape()`: New yardstick metric that calculates "Mean Arctangent Absolute Percentage Error" (MAAPE). Used when MAPE returns Inf typically due to intermittent data. 
+
+### Improvements
+
+- `modeltime_fit_workflowset()`: Improved handling of Workflowset Descriptions, which now match the `wflow_id`. 
+
+# modeltime 0.7.0 
 
 ### Group-Wise Accuracy and Confidence Interval by Time Series ID
 
@@ -10,6 +61,9 @@ We've expanded Panel Data functionality to produce model accuracy and confidence
 
 * `modeltime_forecast()`: Gains a `conf_by_id` argument that is `TRUE`/`FALSE`. If the data has been calibrated with `id`, then the user can return local model confidence by the identifier column. The forecast data frame will return an extra column indicating the identifier column. The confidence intervals will be adjusted based on the local time series ID variance instead of the global model variance. 
 
+### New Vignette
+
+[Forecasting Panel Data](https://business-science.github.io/modeltime/articles/modeling-panel-data.html) 
 
 ### New Algorithms
 

@@ -1,6 +1,6 @@
 Package: modeltime
 Title: The Tidymodels Extension for Time Series Modeling
-Version: 0.7.0
+Version: 1.0.0
 Authors@R: c(
     person("Matt", "Dancho", email = "mdancho@business-science.io", role = c("aut", "cre")),
     person("Business Science", role = "cph"))
@@ -26,13 +26,13 @@ Imports: StanHeaders, timetk (>= 2.6.0), parsnip (>= 0.1.6), dials,
 Suggests: rstan, slider, tidymodels, workflowsets, recipes, rsample,
         tune, tidyverse, lubridate, progress, testthat, roxygen2,
         kernlab, thief, earth, randomForest, tidyquant, knitr,
-        rmarkdown (>= 2.9), webshot, qpdf, covr
+        rmarkdown (>= 2.9), webshot, qpdf, covr, TSrepr
 VignetteBuilder: knitr
 RoxygenNote: 7.1.1
 NeedsCompilation: no
-Packaged: 2021-07-15 16:28:13 UTC; mdancho
+Packaged: 2021-09-14 17:20:19 UTC; mdanc
 Author: Matt Dancho [aut, cre],
   Business Science [cph]
 Maintainer: Matt Dancho <mdancho@business-science.io>
 Repository: CRAN
-Date/Publication: 2021-07-16 07:40:02 UTC
+Date/Publication: 2021-09-14 18:10:02 UTC

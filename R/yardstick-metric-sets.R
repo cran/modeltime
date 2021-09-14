@@ -11,8 +11,11 @@
 #'
 #' @details
 #'
+#' # Default Forecast Accuracy Metric Set
+#'
 #' The primary purpose is to use the default accuracy metrics to calculate the following
 #' forecast accuracy metrics using [modeltime_accuracy()]:
+#'
 #' - MAE   - Mean absolute error, [mae()]
 #' - MAPE  - Mean absolute percentage error, [mape()]
 #' - MASE  - Mean absolute scaled error, [mase()]
@@ -21,6 +24,15 @@
 #' - RSQ   - R-squared, [rsq()]
 #'
 #' Adding additional metrics is possible via `...`.
+#'
+#' # Extended Forecast Accuracy Metric Set
+#'
+#' Extends the default metric set by adding:
+#'
+#' - MAAPE - Mean Arctangent Absolute Percentage Error, [maape()].
+#'   MAAPE is designed for intermittent data where MAPE returns `Inf`.
+#'
+#'
 #'
 #' @seealso
 #' - [yardstick::metric_tweak()] - For modifying `yardstick` metrics
@@ -60,16 +72,39 @@
 #' my_metric_set(fake_data, y, yhat)
 #'
 #'
-#' @export
+#' @name metric_sets
+
 #' @importFrom yardstick mae mape mase smape rmse rsq metric_tweak
+#' @export
+#' @rdname metric_sets
 default_forecast_accuracy_metric_set <- function(...) {
     yardstick::metric_set(
-        mae,
-        mape,
-        mase,
-        smape,
-        rmse,
-        rsq,
+        yardstick::mae,
+        yardstick::mape,
+        yardstick::mase,
+        yardstick::smape,
+        yardstick::rmse,
+        yardstick::rsq,
+        ...
+    )
+}
+
+
+# EXTENDED FORECAST ACCURACY METRIC SET ----
+
+
+#' @importFrom yardstick mae mape mase smape rmse rsq metric_tweak
+#' @export
+#' @rdname metric_sets
+extended_forecast_accuracy_metric_set <- function(...) {
+    yardstick::metric_set(
+        yardstick::mae,
+        yardstick::mape,
+        maape,
+        yardstick::mase,
+        yardstick::smape,
+        yardstick::rmse,
+        yardstick::rsq,
         ...
     )
 }
@@ -173,4 +208,80 @@ calc_accuracy_2 <- function(train_data = NULL, test_data = NULL, metric_set, by_
     metrics_tbl <- dplyr::bind_rows(train_metrics_tbl, test_metrics_tbl)
 
     return(metrics_tbl)
+}
+
+
+# MAAPE ----
+
+#' Mean Arctangent Absolute Percentage Error
+#'
+#' This is basically a wrapper to the function of `TSrepr::maape()`.
+#'
+#' @param truth The column identifier for the true results (that is numeric).
+#' @param estimate The column identifier for the predicted results (that is also numeric).
+#' @param na_rm Not in use...NA values managed by TSrepr::maape
+#' @param ... Not currently in use
+#'
+#' @export
+maape_vec <- function(truth, estimate, na_rm = TRUE, ...) {
+
+    maape_impl <- function(truth, estimate) {
+        TSrepr::maape(truth, estimate)
+    }
+
+    yardstick::metric_vec_template(
+        metric_impl = maape_impl,
+        truth = truth,
+        estimate = estimate,
+        na_rm = na_rm,
+        cls = "numeric",
+        ...
+    )
+
+}
+
+
+# MAAPE ----
+
+#' Mean Arctangent Absolute Percentage Error
+#'
+#' Useful when MAPE returns Inf typically due to intermittent data containing zeros.
+#' This is a wrapper to the function of `TSrepr::maape()`.
+#'
+#' @param data  A `data.frame` containing the truth and estimate columns.
+#' @param ... Not currently in use.
+#'
+#' @export
+
+maape <- function(data, ...) {
+    UseMethod("maape")
+}
+
+maape <- yardstick::new_numeric_metric(maape, direction = "minimize")
+
+# MAAPE ----
+
+#' Mean Arctangent Absolute Percentage Error
+#'
+#' This is basically a wrapper to the function of `TSrepr::maape()`.
+#'
+#' @param data  A `data.frame` containing the truth and estimate columns.
+#' @param truth The column identifier for the true results (that is numeric).
+#' @param estimate The column identifier for the predicted results (that is also numeric).
+#' @param na_rm Not in use...NA values managed by TSrepr::maape
+#' @param ... Not currently in use
+#'
+#' @export
+maape.data.frame <- function(data, truth, estimate, na_rm = TRUE, ...) {
+
+    yardstick::metric_summarizer(
+        metric_nm = "maape",
+        metric_fn = maape_vec,
+        data = data,
+        truth = !! enquo(truth),
+        estimate = !! enquo(estimate),
+        na_rm = na_rm,
+        ...
+    )
+
 }
