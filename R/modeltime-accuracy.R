@@ -41,25 +41,27 @@
 #' library(tidyverse)
 #' library(lubridate)
 #' library(timetk)
+#' library(modeltime)
+#'
 #'
 #' # Data
 #' m750 <- m4_monthly %>% filter(id == "M750")
 #'
 #' # Split Data 80/20
-#' splits <- initial_time_split(m750, prop = 0.9)
+#' splits <- initial_time_split(m750, prop = 0.8)
 #'
 #' # --- MODELS ---
 #'
-#' # Model 1: auto_arima ----
-#' model_fit_arima <- arima_reg() %>%
-#'     set_engine(engine = "auto_arima") %>%
+#' # Model 1: prophet ----
+#' model_fit_prophet <- prophet_reg() %>%
+#'     set_engine(engine = "prophet") %>%
 #'     fit(value ~ date, data = training(splits))
 #'
 #'
 #' # ---- MODELTIME TABLE ----
 #'
 #' models_tbl <- modeltime_table(
-#'     model_fit_arima
+#'     model_fit_prophet
 #' )
 #'
 #' # ---- ACCURACY ----
@@ -138,12 +140,12 @@ modeltime_accuracy.mdl_time_tbl <- function(object, new_data = NULL,
 
     # MAPE/MAAPE Check: Intermittent Series
 
-    if (any(is.na(ret$mape) | is.infinite(ret$mape))){
-
-
-        cli::cli_alert_info(cli::col_yellow("We have detected a possible intermittent series, you can change the default metric set to the extended_forecast_accuracy_metric_set() containing the MAAPE metric, which is more appropriate for this type of series."))
-
+    if ("mape" %in% names(ret)) {
+        if (any(is.na(ret$mape) | is.infinite(ret$mape))){
+            cli::cli_alert_info(cli::col_yellow("We have detected a possible intermittent series, you can change the default metric set to the extended_forecast_accuracy_metric_set() containing the MAAPE metric, which is more appropriate for this type of series."))
+        }
     }
+
 
     if (".nested.col" %in% names(ret)) {
         ret <- ret %>%

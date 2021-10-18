@@ -58,6 +58,7 @@ library(lubridate)
 library(timetk)
 library(parsnip)
 library(rsample)
+library(modeltime)
 
 # Data
 m750 <- m4_monthly \%>\% filter(id == "M750")
@@ -67,15 +68,15 @@ splits <- initial_time_split(m750, prop = 0.9)
 
 # --- MODELS ---
 
-model_fit_auto_arima <- arima_reg() \%>\%
-    set_engine(engine = "auto_arima") \%>\%
+model_fit_prophet <- prophet_reg() \%>\%
+    set_engine(engine = "prophet") \%>\%
     fit(value ~ date, data = training(splits))
 
 
 # ---- MODELTIME TABLE ----
 
 models_tbl <- modeltime_table(
-    model_fit_auto_arima
+    model_fit_prophet
 )
 
 # ---- CALIBRATE ----

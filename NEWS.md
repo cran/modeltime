@@ -1,3 +1,29 @@
+# modeltime 1.1.0 
+
+## Spark Backend
+
+- Modeltime now has a Spark Backend 
+
+- [NEW Vignette - Modeltime Spark Backend](https://business-science.github.io/modeltime/articles/modeltime-spark.html) describing how to set up Modeltime with the Spark Backend. 
+
+## New Algorithms: Smooth Package Integration
+
+If users install `smooth`, the following models become available:
+
+- `adam_reg()`: Interfaces with the ADAM forecasting algorithm in `smooth`. 
+
+- `exp_smoothing()`: A new engine "smooth_es" connects to the Exponential Smoothing algorithm in `smooth::es()`. This algorithm has several advantages, most importantly that it can use x-regs (unlike "ets" engine).
+
+## Nested Modeltime Improvements
+
+- New extractor: `extract_nested_modeltime_table()` - Extracts a nested modeltime table by row id. 
+
+## (potentially) Breaking Changes
+
+- `extract_nested_train_split` and `extract_nested_test_split`: Changed parameter from `.data` to `.object` for consistency with other "extract" functions
+
+- Added a new logged feature to `modeltime_nested_fit()` to track the attribute "metric_set", which is needed for ensembles. Old nested modeltime objects will need to be re-run to get this new attribute. This will be used in ensembles. 
+
 # modeltime 1.0.0
 
 ### New Feature: Nested (Iterative) Forecasting
