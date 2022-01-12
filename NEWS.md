@@ -1,3 +1,9 @@
+# modeltime 1.1.1
+
+## Fixes
+
+- Fixes issue of incorrect order of forecasts #142
+
 # modeltime 1.1.0 
 
 ## Spark Backend
