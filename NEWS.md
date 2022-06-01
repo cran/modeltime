@@ -1,3 +1,13 @@
+# modeltime 1.2.1
+
+### Trelliscope Plotting
+
+- `plot_modeltime_forecast()`: Expose the `facet_trelliscope()` plotting parameters. 
+
+### Fixes
+
+- Use `step_rm()` to get rid of date rather than updating its role #181
+
 # modeltime 1.2.0 
 
 __New Features__

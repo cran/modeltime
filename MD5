@@ -1,7 +1,7 @@
-e75dd7268f0d47b1d03adf1690e80c0f *DESCRIPTION
+6c83780d9df519fe48510e23060c0da6 *DESCRIPTION
 86af95358925c9b37a9d12a9b2d2bbda *LICENSE
 04310d9b27c972c833f743c792bcfdb1 *NAMESPACE
-ea1de9c1f52917332c83b54d14c18e1c *NEWS.md
+e8584dca0ff3ff8d63a55c54edb766a6 *NEWS.md
 cec94d384017160b4b6e28d2b5d55d88 *R/00_global_variables.R
 f09f8e03defaa897ec3cc9af62742c79 *R/data.R
 f94c9179d30b37040a528f4dd26e58b0 *R/dev-constructor.R
@@ -21,7 +21,7 @@ ec7e84a0a502f5d281ae83e56991ffd4 *R/helpers-modeltime_residuals.R
 06d55c1ad25a21897b875dd1b626b440 *R/modeltime-accuracy.R
 122cd8ed964454d3e20685b16385ac72 *R/modeltime-calibrate.R
 e8feec0e8b05ed6c54bc94ba74d15421 *R/modeltime-fit-workflowset.R
-fbdc9e2c6f5295369463050ddc5b6b25 *R/modeltime-forecast-plot.R
+e9aabe8b6b5ab7a0f6b29c63cf2f8998 *R/modeltime-forecast-plot.R
 78138162b142856cacf75d38748efe54 *R/modeltime-forecast.R
 ef2946801e302772ed15437d7b2a966e *R/modeltime-recursive.R
 3d194c504cbf49998a4c2f40af7dce8f *R/modeltime-refit.R
@@ -59,7 +59,7 @@ a1ba11739b0c1d87d75973be780a174e *R/parsnip-window_reg.R
 ee1e8a1db9896566480c0044ca2d68d1 *R/parsnip-window_reg_data.R
 9bde2a40f853c4d6aef3c9536ff21cd3 *R/tibble-type_sum.R
 a98e802795f34af2bee53a0eb2bbdcbd *R/utils-checks-validations.R
-49941077c3191565cdf0af5cda32dfff *R/utils-control-par.R
+141c621fc26ebf6beb057b6fa484d465 *R/utils-control-par.R
 6dbaee7a052a83468a8f62e8a1f8dcd7 *R/utils-is_modeltime.R
 9040ae81d8d5253f5d33200760a0f858 *R/utils-make_grouped_predictions.R
 16dce38fe0f1f2a87b5fa1a303b2eb88 *R/utils-parsnip-helpers.R
@@ -75,8 +75,8 @@ e98663aa6ae2a207945a47ecf795faef *R/zzz.R
 ab8bb8f77ce4575d1c77e5f3e4a15705 *data/m750_splits.rda
 cce428ae5150fe6bb2e93de9b811148d *data/m750_training_resamples.rda
 59dd789b82d808430796282d39fde077 *inst/doc/getting-started-with-modeltime.R
-e37df63bd139803326c5e5b3890a5d5f *inst/doc/getting-started-with-modeltime.Rmd
-d45f402a7ecc4356790c7a3c70cffece *inst/doc/getting-started-with-modeltime.html
+5c7144d0997e413135cf46e80e4c9a1e *inst/doc/getting-started-with-modeltime.Rmd
+fb5b5a5062ffb31103d4135ed0fb900f *inst/doc/getting-started-with-modeltime.html
 34dada7d406c167bb264ae46f29396a3 *man/Adam_predict_impl.Rd
 55330d7a12dfb581dc15b528753356bc *man/Arima_fit_impl.Rd
 95d99121234f5147718015dca9849c66 *man/Arima_predict_impl.Rd
@@ -152,7 +152,7 @@ c7a0c44098ec643055d294c9896da165 *man/panel_tail.Rd
 34acf7b99035a52f61022643aa8f3502 *man/parallel_start.Rd
 282a4e1f5e438d9feea1e9b4d38ba05c *man/parse_index.Rd
 de570f4bd2659c8f2cd27a85c5f92d4f *man/pipe.Rd
-ae1bdf0bf368d3954ff80f5fbf2d534c *man/plot_modeltime_forecast.Rd
+25270e2ebca1cb4451ffea15c2dc2a36 *man/plot_modeltime_forecast.Rd
 883a7ed5446b1bff2791eed65fc9bae9 *man/plot_modeltime_residuals.Rd
 bd49af4a22b243247bd442e19da47aa0 *man/pluck_modeltime_model.Rd
 e02ffc45f12b89bfa293739703a0d8f5 *man/prep_nested.Rd
@@ -225,7 +225,7 @@ aa7b7703e4140e0494a8dc82ac900ef8 *tests/testthat/test-extended_accuracy_metric_s
 9092d535a7194babedf23b28c4221b65 *tests/testthat/test-modeltime_table-forecast-accuracy-refitting.R
 0634dd64b42dc0781b635a6ba7054c31 *tests/testthat/test-modeltime_table-no-calib-refit.R
 96cb181589ae12875a68d77c49e7d817 *tests/testthat/test-nested-modeltime.R
-1590a62e9719fcbfa41986f7e563a000 *tests/testthat/test-panel-data.R
+1a4684abf1a09d093e186db892ef02a0 *tests/testthat/test-panel-data.R
 df5d6b11bc7b14b2d043fba63709cbd4 *tests/testthat/test-recursive.R
 b585ff1352267ef3af76405ad103872d *tests/testthat/test-refit-parallel.R
 cd7941f6236bc102f9b281da59a8a71b *tests/testthat/test-results-accuracy-tables.R
@@ -233,8 +233,9 @@ cd7941f6236bc102f9b281da59a8a71b *tests/testthat/test-results-accuracy-tables.R
 3e338146f99f3179d734f3cdc35b4a7a *tests/testthat/test-results-residuals-tests.R
 e39f13d845edaf7bc2a396508c838c41 *tests/testthat/test-tune_workflows.R
 f2c4474e5e5571b5e75fdf1484c7499b *vignettes/forecast_plot.jpg
-e37df63bd139803326c5e5b3890a5d5f *vignettes/getting-started-with-modeltime.Rmd
+5c7144d0997e413135cf46e80e4c9a1e *vignettes/getting-started-with-modeltime.Rmd
 595286b5f4e53ae8484159258cc9acbe *vignettes/logo-modeltime.png
 050e50ccc907997f22520bd1ad6cd0c3 *vignettes/modeltime-video.jpg
 8359fa45bdee7a0ea2ad892787200093 *vignettes/modeltime_workflow.jpg
 d8a79526f4aee29d8da924c107978fbc *vignettes/time_series_course.jpg
+ef34126289622e0aa78fa2c5ae87eb6b *vignettes/time_series_machine_learning.jpg
