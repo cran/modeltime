@@ -1,3 +1,9 @@
+# modeltime 1.2.2
+
+### Fixes
+
+- Updates for `hardhat 1.0.0` #182
+
 # modeltime 1.2.1
 
 ### Trelliscope Plotting
