@@ -1,7 +1,7 @@
-d5847b76572c9b8c5bac16df70bc0712 *DESCRIPTION
+e17ae5cae712f284d7c4d352c93220a7 *DESCRIPTION
 55fbacaffa937c2e0b77ccf2330cad32 *LICENSE
 3d9228bf656183b5d43000b91aa51be6 *NAMESPACE
-0f9fd7b68a511faa77e58b7193f19049 *NEWS.md
+1b13f9663d87d3698d49d8c4993c31b5 *NEWS.md
 e5d74ca0affa612fa03bdca0c4057c62 *R/00_global_variables.R
 9600b782b890aea93c5acd79e0d0ce0b *R/data.R
 1ae4dd6bd720a87062b55019dc8955f3 *R/dev-constructor.R
@@ -76,7 +76,7 @@ ab8bb8f77ce4575d1c77e5f3e4a15705 *data/m750_splits.rda
 cce428ae5150fe6bb2e93de9b811148d *data/m750_training_resamples.rda
 3815d2e1beff7f614e1c7e63608d7469 *inst/doc/getting-started-with-modeltime.R
 804fb8191af775e3a5594dca6ae85cd8 *inst/doc/getting-started-with-modeltime.Rmd
-3db7410de34f83cb0d9f95ee37b80121 *inst/doc/getting-started-with-modeltime.html
+bf00c4821772e297c4d08009ed3d6d93 *inst/doc/getting-started-with-modeltime.html
 24766c0df439eadd461d6db2b831e5d1 *man/Adam_predict_impl.Rd
 6a4cddd6d5bb4355d06c6ad557c0f3c7 *man/Arima_fit_impl.Rd
 46a3bf0a26307d0ef1c6da0e1dfcab66 *man/Arima_predict_impl.Rd
@@ -216,7 +216,7 @@ ff6b0c703afdf82f07abf955f278c3eb *tests/testthat/test-algo-seasonal_decomp_ets.R
 5c661ccecd7e6871c0277dc3a6f38cee *tests/testthat/test-conf_by_id.R
 11dae6b629757657adfabde1b80df39d *tests/testthat/test-default_accuracy_metric_sets.R
 9eb962cce2d47a8a08432fa409d004b3 *tests/testthat/test-developer-tools-constructor.R
-00fa9b3c4dcd8179e30cf916d90e77ce *tests/testthat/test-developer-tools-xregs.R
+d8f4d4cb623ff0030f389b0dc6110190 *tests/testthat/test-developer-tools-xregs.R
 e671cc41bd65f3428c7ccbd6041bec76 *tests/testthat/test-extended_accuracy_metric_set.R
 1c9273f34b8d08745b9fd9215a2732e5 *tests/testthat/test-fit_workflowsets.R
 582abe4fb0abb90bd8959fbee19a134f *tests/testthat/test-helpers-combine-modeltime-tables.R

@@ -1,3 +1,7 @@
+# modeltime 1.2.4
+
+- Fix failing tests in test-developer-tools-xregs.R
+
 # modeltime 1.2.3
 
 - Recursive `chunk_size` (performance improvement) #197 #190
