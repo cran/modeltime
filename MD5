@@ -1,7 +1,7 @@
-e17ae5cae712f284d7c4d352c93220a7 *DESCRIPTION
+f5b5b69bfdb730deccfe55287ac9c98a *DESCRIPTION
 55fbacaffa937c2e0b77ccf2330cad32 *LICENSE
 3d9228bf656183b5d43000b91aa51be6 *NAMESPACE
-1b13f9663d87d3698d49d8c4993c31b5 *NEWS.md
+6078afd9ed6c71aeae5ac4fbe4761bd6 *NEWS.md
 e5d74ca0affa612fa03bdca0c4057c62 *R/00_global_variables.R
 9600b782b890aea93c5acd79e0d0ce0b *R/data.R
 1ae4dd6bd720a87062b55019dc8955f3 *R/dev-constructor.R
@@ -41,7 +41,7 @@ aaca90c8ab9cbade586db2e80b455667 *R/parsnip-arima_boost.R
 f65069074c2fd3ec4a69815471467c1b *R/parsnip-arima_boost_data.R
 29a2a0287c22274bf135a2883a2ae86f *R/parsnip-arima_reg.R
 c59dbd54f83549297d59814599b20bdc *R/parsnip-arima_reg_data.R
-ec596c119face008316cc566f297f321 *R/parsnip-exp_smoothing.R
+35a4eb86df94f0161fdb3ce97e5f785a *R/parsnip-exp_smoothing.R
 fd578cbfab5c56bd1b59aead4ea67282 *R/parsnip-exp_smoothing_data.R
 f522a47cbc6d6629d490e999a8224b5b *R/parsnip-naive_reg.R
 21c83efa6c5cc2c23ee6f4817ab0a704 *R/parsnip-naive_reg_data.R
@@ -76,14 +76,14 @@ ab8bb8f77ce4575d1c77e5f3e4a15705 *data/m750_splits.rda
 cce428ae5150fe6bb2e93de9b811148d *data/m750_training_resamples.rda
 3815d2e1beff7f614e1c7e63608d7469 *inst/doc/getting-started-with-modeltime.R
 804fb8191af775e3a5594dca6ae85cd8 *inst/doc/getting-started-with-modeltime.Rmd
-bf00c4821772e297c4d08009ed3d6d93 *inst/doc/getting-started-with-modeltime.html
+e22d0447097a9003207d7b98dafe47c8 *inst/doc/getting-started-with-modeltime.html
 24766c0df439eadd461d6db2b831e5d1 *man/Adam_predict_impl.Rd
 6a4cddd6d5bb4355d06c6ad557c0f3c7 *man/Arima_fit_impl.Rd
 46a3bf0a26307d0ef1c6da0e1dfcab66 *man/Arima_predict_impl.Rd
 7bbee9ccc1122f0bcda4c2f63a98291f *man/Auto_adam_predict_impl.Rd
 301d29024d8e0fa5147bed5e428c8244 *man/adam_fit_impl.Rd
 19cc3072bd0b1158029edd719da6af55 *man/adam_params.Rd
-dd1910993d002cffa5d882809d946dc7 *man/adam_reg.Rd
+ab6dcff74882ff936f55e2166c8151d0 *man/adam_reg.Rd
 69cae84c987e9588414e22614ed6b69e *man/add_modeltime_model.Rd
 d533efccf15aa76b48d2555157bd002b *man/arima_boost.Rd
 375cc1636c26fb19a0f78701f9eb066f *man/arima_params.Rd
@@ -103,7 +103,7 @@ aa8b5bc01dfa23333b690ef3f20a76a2 *man/croston_predict_impl.Rd
 578a45aa57d05dfaba9ab8397f913493 *man/drop_modeltime_model.Rd
 e2b9fdafa7fc7bf1d088c7542c471cd8 *man/ets_fit_impl.Rd
 b3f265412e190e8401aaad1c17210234 *man/ets_predict_impl.Rd
-76f3b9d6705cc8c7e30304da17e67d6c *man/exp_smoothing.Rd
+af2f21ef291e487cb4f7dbe74f34043f *man/exp_smoothing.Rd
 ea8ca46f0fa9a9f0b904a48836a3cd84 *man/exp_smoothing_params.Rd
 b807934257f7f1ac0cb907a6844ab034 *man/figures/README-unnamed-chunk-7-1.png
 398e4c7265f83fee93b2ea2ceb886d61 *man/figures/README-unnamed-chunk-8-1.png
@@ -204,7 +204,7 @@ eaa79d25698445a4018ab1111c95405f *tests/testthat/test-algo-adam_reg-auto_adam.R
 09055440583e2d30e482c919b8af0109 *tests/testthat/test-algo-arima_boost-auto_arima.R
 fbebd05765a9ff836121c81b12584a5e *tests/testthat/test-algo-arima_reg-Arima.R
 62fd312561f3e4d342e9396c04501326 *tests/testthat/test-algo-arima_reg-auto_arima.R
-873bf936a3364afce9c52922f13e0b44 *tests/testthat/test-algo-exp_smoothing-ets.R
+bcb7c46493e83fed91ece42071a8e452 *tests/testthat/test-algo-exp_smoothing-ets.R
 ecbc67beeef2bb370954eef6feec0d58 *tests/testthat/test-algo-nnetar_reg.R
 600bd1c30697d5456c337d586a20b38a *tests/testthat/test-algo-prophet_boost.R
 48367d38ee24a4fd6673a74caf80a7e3 *tests/testthat/test-algo-prophet_reg.R
