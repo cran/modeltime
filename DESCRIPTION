@@ -1,6 +1,6 @@
 Package: modeltime
 Title: The Tidymodels Extension for Time Series Modeling
-Version: 1.2.5
+Version: 1.2.6
 Authors@R: c(
     person("Matt", "Dancho", email = "mdancho@business-science.io", role = c("aut", "cre")),
     person("Business Science", role = "cph"))
@@ -23,18 +23,19 @@ Imports: StanHeaders, timetk (>= 2.8.1), parsnip (>= 0.2.1), dials,
         rlang (>= 0.1.2), glue, plotly, reactable, gt, ggplot2, tibble,
         tidyr, dplyr, purrr, stringr, forcats, scales, janitor,
         parallel, parallelly, doParallel, foreach, magrittr, forecast,
-        xgboost (>= 1.2.0.1), prophet, methods, cli
-Suggests: rstan, slider, sparklyr, tidymodels, workflowsets, recipes,
-        rsample, tune (>= 0.2.0), tidyverse, lubridate, progress,
-        testthat, roxygen2, kernlab, glmnet, thief, smooth, greybox,
-        earth, randomForest, tidyquant, trelliscopejs, knitr, rmarkdown
-        (>= 2.9), webshot, qpdf, covr, TSrepr
+        xgboost (>= 1.2.0.1), prophet, methods, cli, tidyverse,
+        tidymodels
+Suggests: rstan, slider, sparklyr, workflowsets, recipes, rsample, tune
+        (>= 0.2.0), lubridate, progress, testthat, roxygen2, kernlab,
+        glmnet, thief, smooth, greybox, earth, randomForest,
+        trelliscopejs, knitr, rmarkdown (>= 2.9), webshot, qpdf, covr,
+        TSrepr
 VignetteBuilder: knitr
 RoxygenNote: 7.2.3
 NeedsCompilation: no
-Packaged: 2023-02-07 18:49:54 UTC; mdancho
+Packaged: 2023-03-30 17:03:25 UTC; mdanc
 Author: Matt Dancho [aut, cre],
   Business Science [cph]
 Maintainer: Matt Dancho <mdancho@business-science.io>
 Repository: CRAN
-Date/Publication: 2023-02-07 19:32:30 UTC
+Date/Publication: 2023-03-31 12:10:02 UTC
