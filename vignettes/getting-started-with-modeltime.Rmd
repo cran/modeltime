@@ -25,6 +25,9 @@ knitr::opts_chunk$set(
   message = FALSE,
   warning = FALSE
 )
+
+# CRAN OMP THREAD LIMIT
+Sys.setenv("OMP_THREAD_LIMIT" = 1)
 ```
 
 

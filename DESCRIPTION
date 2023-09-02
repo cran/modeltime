@@ -1,6 +1,6 @@
 Package: modeltime
 Title: The Tidymodels Extension for Time Series Modeling
-Version: 1.2.7
+Version: 1.2.8
 Authors@R: c(
     person("Matt", "Dancho", email = "mdancho@business-science.io", role = c("aut", "cre")),
     person("Business Science", role = "cph"))
@@ -33,9 +33,9 @@ Suggests: rstan, slider, sparklyr, workflowsets, recipes, rsample, tune
 VignetteBuilder: knitr
 RoxygenNote: 7.2.3
 NeedsCompilation: no
-Packaged: 2023-07-03 14:28:46 UTC; mdancho
+Packaged: 2023-09-02 14:32:11 UTC; mdanc
 Author: Matt Dancho [aut, cre],
   Business Science [cph]
 Maintainer: Matt Dancho <mdancho@business-science.io>
 Repository: CRAN
-Date/Publication: 2023-07-03 15:10:02 UTC
+Date/Publication: 2023-09-02 15:10:02 UTC

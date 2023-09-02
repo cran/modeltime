@@ -11,6 +11,7 @@ modeltime_forecast(
   actual_data = NULL,
   conf_interval = 0.95,
   conf_by_id = FALSE,
+  conf_method = "conformal_default",
   keep_data = FALSE,
   arrange_index = FALSE,
   ...
@@ -36,6 +37,12 @@ This is designed to estimate future confidence from \emph{out-of-sample predicti
 \item When \code{FALSE}, a global model confidence interval is provided.
 \item If \code{TRUE}, a local confidence interval is provided group-wise for each time series ID.
 To enable local confidence interval, an \code{id} must be provided during \code{modeltime_calibrate()}.
+}}
+
+\item{conf_method}{Algorithm used to produce confidence intervals. All CI's are Conformal Predictions. Choose one of:
+\itemize{
+\item \code{conformal_default}: Uses \code{qnorm()} to compute quantiles from out-of-sample (test set) residuals.
+\item \code{conformal_split}: Uses the split method split conformal inference method described by Lei \emph{et al} (2018)
 }}
 
 \item{keep_data}{Whether or not to keep the \code{new_data} and \code{actual_data} as extra columns in the results.
@@ -137,16 +144,29 @@ the testing errors (out of sample) from \code{\link[=modeltime_calibrate]{modelt
 The out-of-sample error estimates are then carried through and
 applied to applied to any future forecasts.
 
-The confidence interval can be adjusted with the \code{conf_interval} parameter. An
-80\% confidence interval estimates a normal (Gaussian distribution) that assumes that
-80\% of the future data will fall within the upper and lower confidence limits.
+The confidence interval can be adjusted with the \code{conf_interval} parameter. The algorithm used
+to produce confidence intervals can be changed with the \code{conf_method} parameter.
+
+\emph{Conformal Default Method:}
+
+When \code{conf_method = "conformal_default"} (default), this method uses \code{qnorm()}
+to produce a 95\% confidence interval by default. It estimates a normal (Gaussian distribution)
+based on the out-of-sample errors (residuals).
 
 The confidence interval is \emph{mean-adjusted}, meaning that if the mean of the residuals
 is non-zero, the confidence interval is adjusted to widen the interval to capture
 the difference in means.
 
+\emph{Conformal Split Method:}
+
+When \verb{conf_method = "conformal_split}, this method uses the split conformal inference method
+described by Lei \emph{et al} (2018). This is also implemented in the \code{probably} R package's
+\code{int_conformal_split()} function.
+
+\emph{What happens to the confidence interval after refitting models?}
+
 Refitting has no affect on the confidence interval since this is calculated independently of
-the refitted model (on data with a smaller sample size). New observations typically improve
+the refitted model. New observations typically improve
 future accuracy, which in most cases makes the out-of-sample confidence intervals conservative.
 
 \strong{Keep Data}
@@ -226,4 +246,8 @@ calibration_tbl \%>\%
         keep_data     = TRUE
     )
 
+}
+\references{
+Lei, Jing, et al. "Distribution-free predictive inference for regression."
+\emph{Journal of the American Statistical Association} 113.523 (2018): 1094-1111.
 }

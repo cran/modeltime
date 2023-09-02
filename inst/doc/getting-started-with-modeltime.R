@@ -12,6 +12,9 @@ knitr::opts_chunk$set(
   warning = FALSE
 )
 
+# CRAN OMP THREAD LIMIT
+Sys.setenv("OMP_THREAD_LIMIT" = 1)
+
 ## ---- echo=F,  out.width="100%", fig.align='center'---------------------------
 knitr::include_graphics("forecast_plot.jpg")
 

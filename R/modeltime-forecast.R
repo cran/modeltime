@@ -16,10 +16,16 @@
 #'  This is designed to estimate future confidence from _out-of-sample prediction error_.
 #' @param conf_by_id Whether or not to produce confidence interval estimates by an ID feature.
 #'
-#' - When `FALSE`, a global model confidence interval is provided.
+#'  - When `FALSE`, a global model confidence interval is provided.
 #'
 #'  - If `TRUE`, a local confidence interval is provided group-wise for each time series ID.
 #'    To enable local confidence interval, an `id` must be provided during `modeltime_calibrate()`.
+#'
+#' @param conf_method Algorithm used to produce confidence intervals. All CI's are Conformal Predictions. Choose one of:
+#'
+#'  - `conformal_default`: Uses `qnorm()` to compute quantiles from out-of-sample (test set) residuals.
+#'
+#'  - `conformal_split`: Uses the split method split conformal inference method described by Lei _et al_ (2018)
 #'
 #' @param keep_data Whether or not to keep the `new_data` and `actual_data` as extra columns in the results.
 #'  This can be useful if there is an important feature in the `new_data` and `actual_data` needed
@@ -108,16 +114,29 @@
 #' The out-of-sample error estimates are then carried through and
 #' applied to applied to any future forecasts.
 #'
-#' The confidence interval can be adjusted with the `conf_interval` parameter. An
-#' 80% confidence interval estimates a normal (Gaussian distribution) that assumes that
-#' 80% of the future data will fall within the upper and lower confidence limits.
+#' The confidence interval can be adjusted with the `conf_interval` parameter. The algorithm used
+#' to produce confidence intervals can be changed with the `conf_method` parameter.
+#'
+#' _Conformal Default Method:_
+#'
+#' When `conf_method = "conformal_default"` (default), this method uses `qnorm()`
+#' to produce a 95% confidence interval by default. It estimates a normal (Gaussian distribution)
+#' based on the out-of-sample errors (residuals).
 #'
 #' The confidence interval is _mean-adjusted_, meaning that if the mean of the residuals
 #' is non-zero, the confidence interval is adjusted to widen the interval to capture
 #' the difference in means.
 #'
+#' _Conformal Split Method:_
+#'
+#' When `conf_method = "conformal_split`, this method uses the split conformal inference method
+#' described by Lei _et al_ (2018). This is also implemented in the `probably` R package's
+#' `int_conformal_split()` function.
+#'
+#' _What happens to the confidence interval after refitting models?_
+#'
 #' Refitting has no affect on the confidence interval since this is calculated independently of
-#' the refitted model (on data with a smaller sample size). New observations typically improve
+#' the refitted model. New observations typically improve
 #' future accuracy, which in most cases makes the out-of-sample confidence intervals conservative.
 #'
 #' __Keep Data__
@@ -132,6 +151,9 @@
 #' By default, `modeltime_forecast()` keeps the original order of the data.
 #' If desired, the user can sort the output by `.key`, `.model_id` and `.index`.
 #'
+#' @references
+#' Lei, Jing, et al. "Distribution-free predictive inference for regression."
+#' _Journal of the American Statistical Association_ 113.523 (2018): 1094-1111.
 #'
 #' @examples
 #' library(tidyverse)
@@ -204,7 +226,7 @@ NULL
 #' @export
 #' @rdname modeltime_forecast
 modeltime_forecast <- function(object, new_data = NULL, h = NULL, actual_data = NULL,
-                               conf_interval = 0.95, conf_by_id = FALSE,
+                               conf_interval = 0.95, conf_by_id = FALSE, conf_method = "conformal_default",
                                keep_data = FALSE, arrange_index = FALSE, ...) {
 
     # Required arguments & messages
@@ -250,19 +272,23 @@ modeltime_forecast <- function(object, new_data = NULL, h = NULL, actual_data = 
         }
     }
 
+    if (!conf_method %in% c("conformal_default", "conformal_split")) {
+        rlang::abort('conf_method must be one of "conformal_default", "conformal_split"')
+    }
+
     UseMethod("modeltime_forecast")
 }
 
 #' @export
 modeltime_forecast.default <- function(object, new_data = NULL, h = NULL, actual_data = NULL,
-                                       conf_interval = 0.95, conf_by_id = FALSE,
+                                       conf_interval = 0.95, conf_by_id = FALSE,  conf_method = "conformal_default",
                                        keep_data = FALSE, arrange_index = FALSE, ...) {
     glubort("Received an object of class: {class(object)[1]}. Expected an object of class:\n 1. 'mdl_time_tbl' - A Model Time Table made with 'modeltime_table()' and calibrated with 'modeltime_calibrate()'.")
 }
 
 #' @export
 modeltime_forecast.mdl_time_tbl <- function(object, new_data = NULL, h = NULL, actual_data = NULL,
-                                            conf_interval = 0.95, conf_by_id = FALSE,
+                                            conf_interval = 0.95, conf_by_id = FALSE, conf_method = "conformal_default",
                                             keep_data = FALSE, arrange_index = FALSE, ...) {
 
     data <- object
@@ -353,6 +379,7 @@ modeltime_forecast.mdl_time_tbl <- function(object, new_data = NULL, h = NULL, a
                     safe_conf_interval_map_by_id(
                         data_calibration,
                         conf_interval = conf_interval,
+                        conf_method   = conf_method,
                         id            = !! id_col
                     ) %>%
                     dplyr::select(.model_id, .model_desc, .key, .index, .value, .conf_lo, .conf_hi, dplyr::all_of(names(new_data)))
@@ -382,7 +409,11 @@ modeltime_forecast.mdl_time_tbl <- function(object, new_data = NULL, h = NULL, a
 
         } else {
             ret <- ret %>%
-                safe_conf_interval_map(data_calibration, conf_interval = conf_interval) %>%
+                safe_conf_interval_map(
+                    data_calibration,
+                    conf_interval = conf_interval,
+                    conf_method   = conf_method
+                ) %>%
                 dplyr::relocate(dplyr::starts_with(".conf_"), .after = .value)
 
             # Remove unnecessary columns if `keep_data = FALSE`
@@ -443,15 +474,27 @@ safe_modeltime_forecast_map <- function(data, new_data = NULL, h = NULL, actual_
 
 # SAFE CONF INTERVAL MAPPERS ----
 
-safe_conf_interval_map <- function(data, data_calibration, conf_interval) {
+safe_conf_interval_map <- function(data, data_calibration, conf_interval, conf_method) {
 
-    safe_ci <- purrr::safely(
-        centered_residuals,
-        otherwise = tibble::tibble(
-            .conf_lo = NA,
-            .conf_hi = NA
-        ),
-        quiet = FALSE)
+    empty_ci_tbl <- tibble::tibble(
+        .conf_lo = NA,
+        .conf_hi = NA
+    )
+
+    if (conf_method == "conformal_default") {
+        safe_ci <- purrr::safely(
+            conformal_default_func,
+            otherwise = empty_ci_tbl,
+            quiet = FALSE
+        )
+    }
+    if (conf_method == "conformal_split") {
+        safe_ci <- purrr::safely(
+            conformal_split_func,
+            otherwise = empty_ci_tbl,
+            quiet = FALSE
+        )
+    }
 
     data %>%
         dplyr::group_by(.model_id) %>%
@@ -467,15 +510,27 @@ safe_conf_interval_map <- function(data, data_calibration, conf_interval) {
         dplyr::ungroup()
 }
 
-safe_conf_interval_map_by_id <- function(data, data_calibration, conf_interval, id) {
+safe_conf_interval_map_by_id <- function(data, data_calibration, conf_interval, id, conf_method) {
 
-    safe_ci <- purrr::safely(
-        centered_residuals,
-        otherwise = tibble::tibble(
-            .conf_lo = NA,
-            .conf_hi = NA
-        ),
-        quiet = FALSE)
+    empty_ci_tbl <- tibble::tibble(
+        .conf_lo = NA,
+        .conf_hi = NA
+    )
+
+    if (conf_method == "conformal_default") {
+        safe_ci <- purrr::safely(
+            conformal_default_func,
+            otherwise = empty_ci_tbl,
+            quiet = FALSE
+        )
+    }
+    if (conf_method == "conformal_split") {
+        safe_ci <- purrr::safely(
+            conformal_split_func,
+            otherwise = empty_ci_tbl,
+            quiet = FALSE
+        )
+    }
 
     forecast_nested_tbl <- data %>%
         tibble::rowid_to_column(var = "..rowid") %>%
@@ -512,8 +567,8 @@ safe_conf_interval_map_by_id <- function(data, data_calibration, conf_interval, 
         )
 }
 
-
-centered_residuals <- function(data_1, data_2, conf_interval) {
+# * DEFAULT CI METHOD: QUANTILE OF NORMAL DISTRIBUTION AROUND PREDICTIONS ----
+conformal_default_func <- function(data_1, data_2, conf_interval) {
 
     # Collect absolute residuals
     ret <- tryCatch({
@@ -521,12 +576,50 @@ centered_residuals <- function(data_1, data_2, conf_interval) {
         residuals <- c(data_2$.residuals, -data_2$.residuals)
         s <- stats::sd(residuals)
 
-        data_1 %>%
+        ci_tbl <- data_1 %>%
             dplyr::mutate(
                 .conf_lo = stats::qnorm((1-conf_interval)/2, mean = .value, sd = s),
                 .conf_hi = stats::qnorm((1+conf_interval)/2, mean = .value, sd = s)
             ) %>%
             dplyr::select(.conf_lo, .conf_hi)
+
+        ci_tbl
+
+    }, error = function(e) {
+        tibble::tibble(
+            .conf_lo = NA,
+            .conf_hi = NA
+        )
+    })
+
+    return(ret)
+
+}
+
+# * CONFORMAL PREDICTION VIA SPLIT METHOD ----
+# https://github.com/tidymodels/probably/blob/c46326651109fb2ebd1b3762b3cb086cfb96ac88/R/conformal_infer_split.R#L99
+conformal_split_func <- function(data_1, data_2, conf_interval) {
+
+    # Collect absolute residuals
+    ret <- tryCatch({
+
+        residuals        <- data_2$.residuals
+        residuals_sorted <- residuals %>%
+            abs() %>%
+            sort(decreasing = FALSE)
+
+        n     <- nrow(data_2)
+        q_ind <- ceiling(conf_interval * n)
+        q_val <- residuals_sorted[q_ind]
+
+        ci_tbl <- data_1 %>%
+            dplyr::mutate(
+                .conf_lo = .value - q_val,
+                .conf_hi = .value + q_val
+            ) %>%
+            dplyr::select(.conf_lo, .conf_hi)
+
+        ci_tbl
 
     }, error = function(e) {
         tibble::tibble(
