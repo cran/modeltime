@@ -210,24 +210,18 @@ prepare_xreg_recipe_from_predictors <- function(data, prepare = TRUE,
             }
 
             # Convert any ordered factors to factors
-            names_ordered <- data_copy %>%
-                dplyr::select_if(is.ordered) %>%
-                names()
+            names_ordered <- names(data_copy)[purrr::map_lgl(data_copy, is.ordered)]
 
             if (length(names_ordered) > 0) {
                 recipe_spec <- recipe_spec %>%
-                    recipes::step_mutate_at(names_ordered,
+                    recipes::step_mutate_at(dplyr::all_of(names_ordered),
                                             fn = ~ factor(., ordered = FALSE))
             }
 
             # Convert factors to dummies
-            names_factor <- data_copy %>%
-                dplyr::select_if(is.factor)%>%
-                names()
+            names_factor <- names(data_copy)[purrr::map_lgl(data_copy, is.factor)]
 
-            names_character <- data_copy %>%
-                dplyr::select_if(is.character)%>%
-                names()
+            names_character <- names(data_copy)[purrr::map_lgl(data_copy, is.character)]
 
             if (length(c(names_factor, names_character)) > 0 && dummy_encode) {
                 recipe_spec <- recipe_spec %>%
@@ -235,13 +229,11 @@ prepare_xreg_recipe_from_predictors <- function(data, prepare = TRUE,
             }
 
             # Drop any date features
-            names_date <- data_copy %>%
-                dplyr::select_if(timetk::is_date_class) %>%
-                names()
+            names_date <- names(data_copy)[purrr::map_lgl(data_copy, timetk::is_date_class)]
 
             if (length(c(names_date)) > 0) {
                 recipe_spec <- recipe_spec %>%
-                    recipes::step_rm(names_date)
+                    recipes::step_rm(dplyr::all_of(names_date))
             }
 
             # Remove any zero variance predictors
@@ -254,12 +246,14 @@ prepare_xreg_recipe_from_predictors <- function(data, prepare = TRUE,
             }
 
         }, error = function(e) {
-            rlang::warn(
-                paste0("Failed to return valid external regressors. Proceeding without regressors.\n---",
-                       '\nWhat most likely happened: \nIf all of the regressors have zero variance (meaning they add no predictive value to the model), they are removed leaving no valid regressors.')
-            )
-            recipe_spec <- NULL
-            return(recipe_spec)
+            cli::cli_warn(c(
+                "Failed to return valid external regressors. Proceeding without regressors.",
+                "---",
+                "What most likely happened:",
+                i = "If all of the regressors have zero variance (meaning they add no predictive value to the model), they are removed leaving no valid regressors."
+                ))
+            # recipe_spec
+            return(NULL)
         })
 
     } else {

@@ -47,6 +47,7 @@ modeltime_nested_fit <- function(nested_data, ...,
                                  model_list = NULL,
                                  metric_set = default_forecast_accuracy_metric_set(),
                                  conf_interval = 0.95,
+                                 conf_method = "conformal_default",
                                  control = control_nested_fit()) {
 
 
@@ -72,6 +73,7 @@ modeltime_nested_fit <- function(nested_data, ...,
             model_list    = model_list,
             metric_set    = metric_set,
             conf_interval = conf_interval,
+            conf_method   = conf_method,
             control       = control
         )
     } else {
@@ -81,6 +83,7 @@ modeltime_nested_fit <- function(nested_data, ...,
             model_list    = model_list,
             metric_set    = metric_set,
             conf_interval = conf_interval,
+            conf_method   = conf_method,
             control       = control
         )
     }
@@ -93,6 +96,7 @@ modeltime_nested_fit_parallel <- function(nested_data, ...,
                                           model_list = NULL,
                                           metric_set = default_forecast_accuracy_metric_set(),
                                           conf_interval = 0.95,
+                                          conf_method = "conformal_default",
                                           control = control_nested_fit()) {
 
 
@@ -256,7 +260,8 @@ modeltime_nested_fit_parallel <- function(nested_data, ...,
                         object        = ret,
                         new_data      = dplyr::slice(d, x$idx_test),
                         actual_data   = d,
-                        conf_interval = conf_interval
+                        conf_interval = conf_interval,
+                        conf_method   = conf_method
                     ) %>%
                         tibble::add_column(!! id_text := id, .before = 1)
 
@@ -319,6 +324,7 @@ modeltime_nested_fit_parallel <- function(nested_data, ...,
     attr(nested_modeltime, "id")                  <- id_text
     attr(nested_modeltime, "model_list_tbl")      <- model_list_tbl
     attr(nested_modeltime, "conf_interval")       <- conf_interval
+    attr(nested_modeltime, "conf_method")         <- conf_method
     attr(nested_modeltime, "metric_set")          <- metric_set
     attr(nested_modeltime, "error_tbl")           <- error_tbl
     attr(nested_modeltime, "accuracy_tbl")        <- acc_tbl
@@ -342,6 +348,7 @@ modeltime_nested_fit_sequential <- function(nested_data, ...,
                                             model_list = NULL,
                                             metric_set = default_forecast_accuracy_metric_set(),
                                             conf_interval = 0.95,
+                                            conf_method = "conformal_default",
                                             control = control_nested_fit()) {
 
     t1 <- Sys.time()
@@ -505,7 +512,8 @@ modeltime_nested_fit_sequential <- function(nested_data, ...,
                                 object        = ret,
                                 new_data      = d %>% dplyr::slice(x$idx_test),
                                 actual_data   = d,
-                                conf_interval = conf_interval
+                                conf_interval = conf_interval,
+                                conf_method   = conf_method
                             ) %>%
                                 tibble::add_column(!! id_text := id, .before = 1)
 
@@ -556,6 +564,7 @@ modeltime_nested_fit_sequential <- function(nested_data, ...,
     attr(nested_modeltime, "id")                  <- id_text
     attr(nested_modeltime, "model_list_tbl")      <- model_list_tbl
     attr(nested_modeltime, "conf_interval")       <- conf_interval
+    attr(nested_modeltime, "conf_method")         <- conf_method
     attr(nested_modeltime, "metric_set")          <- metric_set
     attr(nested_modeltime, "error_tbl")           <- error_tbl
     attr(nested_modeltime, "accuracy_tbl")        <- logging_env$acc_tbl
@@ -583,13 +592,18 @@ print.nested_mdl_time <- function(x, ...) {
         dplyr::pull(.model_id) %>%
         unique() %>%
         length()
+    conf_interval <- attr(x, 'conf_interval')
+    conf_method   <- attr(x, 'conf_method')
+    if (is.null(conf_method)) {conf_method <- "conformal_default"}
 
     cat("# Nested Modeltime Table\n")
     cat("  ")
-    cli::cli_text(cli::col_grey("Trained on: {fit_col} | Model Errors: [{n_models_with_errors}]"))
+    cli::cli_text(cli::col_grey("Trained on: {fit_col} | Forecast Errors: [{n_models_with_errors}] | Conf Method: {conf_method} | Conf Interval: {conf_interval}"))
     # cli::cli_rule()
     class(x) <- class(x)[!(class(x) %in% c("nested_mdl_time"))]
     print(x, ...)
+
+
 }
 
 

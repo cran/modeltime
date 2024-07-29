@@ -34,10 +34,9 @@ To re-calibrate, simply run \code{\link[=modeltime_calibrate]{modeltime_calibrat
 combined Modeltime Table.
 }
 \examples{
-library(modeltime)
 library(tidymodels)
-library(tidyverse)
 library(timetk)
+library(dplyr)
 library(lubridate)
 
 # Setup

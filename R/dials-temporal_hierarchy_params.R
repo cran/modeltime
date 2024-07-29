@@ -1,6 +1,6 @@
 #' Tuning Parameters for TEMPORAL HIERARCHICAL Models
 #'
-#'
+#' @param values A character string of possible values.
 #'
 #' @details
 #' The main parameters for Temporal Hierarchical models are:
@@ -18,10 +18,10 @@
 
 #' @export
 #' @rdname temporal_hierarchy_params
-combination_method <- function() {
+combination_method <- function(values = c("struc", "mse", "ols", "bu", "shr", "sam")) {
     dials::new_qual_param(
         type      = "character",
-        values    = c("struc", "mse", "ols", "bu", "shr", "sam"),
+        values    = values,
         label     = c(method = "Combination method of temporal hierarchies."),
         finalize  = NULL
     )

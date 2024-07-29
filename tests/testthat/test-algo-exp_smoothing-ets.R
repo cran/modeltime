@@ -5,14 +5,14 @@ context("TEST exp_smoothing()")
 # SETUP ----
 
 # Data
-m750 <- m4_monthly %>% filter(id == "M750")
+m750 <- timetk::m4_monthly %>% dplyr::filter(id == "M750")
 
 # Split Data 80/20
-splits <- initial_time_split(m750, prop = 0.9)
+splits <- rsample::initial_time_split(m750, prop = 0.9)
 
 # Model Spec
 model_spec <- exp_smoothing() %>%
-    set_engine("ets")
+    parsnip::set_engine("ets")
 
 
 # ETS PARSNIP ----
@@ -22,51 +22,51 @@ model_spec <- exp_smoothing() %>%
 # TESTS
 test_that("exp_smoothing: ets, Test Model Fit Object", {
 
-    testthat::skip_on_cran()
+    skip_on_cran()
 
     #
 
     # Fit Spec
     model_fit <- model_spec %>%
-        fit(log(value) ~ date, data = training(splits))
+        fit(log(value) ~ date, data = rsample::training(splits))
 
     # Predictions
     predictions_tbl <- model_fit %>%
-        modeltime_calibrate(testing(splits)) %>%
-        modeltime_forecast(new_data = testing(splits))
+        modeltime_calibrate(rsample::testing(splits)) %>%
+        modeltime_forecast(new_data = rsample::testing(splits))
 
-    testthat::expect_s3_class(model_fit$fit, "ets_fit_impl")
+    expect_s3_class(model_fit$fit, "ets_fit_impl")
 
     # $fit
 
-    testthat::expect_s3_class(model_fit$fit$models$model_1, "ets")
+    expect_s3_class(model_fit$fit$models$model_1, "ets")
 
-    testthat::expect_s3_class(model_fit$fit$data, "tbl_df")
+    expect_s3_class(model_fit$fit$data, "tbl_df")
 
-    testthat::expect_equal(names(model_fit$fit$data)[1], "date")
+    expect_equal(names(model_fit$fit$data)[1], "date")
 
-    testthat::expect_true(is.null(model_fit$fit$extras$xreg_recipe))
+    expect_null(model_fit$fit$extras$xreg_recipe)
 
     # $preproc
 
-    testthat::expect_equal(model_fit$preproc$y_var, "value")
+    expect_equal(model_fit$preproc$y_var, "value")
 
 
     # exp_smoothing: ets, Test Predictions
 
     # Structure
-    testthat::expect_identical(nrow(testing(splits)), nrow(predictions_tbl))
-    testthat::expect_identical(testing(splits)$date, predictions_tbl$.index)
+    expect_identical(nrow(rsample::testing(splits)), nrow(predictions_tbl))
+    expect_identical(rsample::testing(splits)$date, predictions_tbl$.index)
 
     # Out-of-Sample Accuracy Tests
 
-    resid <- testing(splits)$value - exp(predictions_tbl$.value)
+    resid <- rsample::testing(splits)$value - exp(predictions_tbl$.value)
 
     # - Max Error less than 1500
-    testthat::expect_lte(max(abs(resid)), 1500)
+    expect_lte(max(abs(resid)), 1500)
 
     # - MAE less than 700
-    testthat::expect_lte(mean(abs(resid)), 800)
+    expect_lte(mean(abs(resid)), 800)
 
 })
 
@@ -79,7 +79,7 @@ test_that("exp_smoothing: ets, Test Model Fit Object", {
 # TESTS
 test_that("exp_smoothing: Arima (workflow), Test Model Fit Object", {
 
-    testthat::skip_on_cran()
+    skip_on_cran()
 
     #
 
@@ -90,63 +90,63 @@ test_that("exp_smoothing: Arima (workflow), Test Model Fit Object", {
         ,
         smooth_level = 0.2, smooth_trend = 0.1, smooth_seasonal = 0.1
     ) %>%
-        set_engine("ets")
+        parsnip::set_engine("ets")
 
     # Recipe spec
-    recipe_spec <- recipe(value ~ date, data = training(splits)) %>%
-        step_log(value, skip = FALSE)
+    recipe_spec <- recipes::recipe(value ~ date, data = rsample::training(splits)) %>%
+        recipes::step_log(value, skip = FALSE)
 
     # Workflow
-    wflw <- workflow() %>%
-        add_recipe(recipe_spec) %>%
-        add_model(model_spec)
+    wflw <- workflows::workflow() %>%
+        workflows::add_recipe(recipe_spec) %>%
+        workflows::add_model(model_spec)
 
     wflw_fit <- wflw %>%
-        fit(training(splits))
+        fit(rsample::training(splits))
 
     # Forecast
     predictions_tbl <- wflw_fit %>%
-        modeltime_calibrate(testing(splits)) %>%
-        modeltime_forecast(new_data = testing(splits),
-                           actual_data = training(splits)) %>%
-        mutate_at(vars(.value), exp)
+        modeltime_calibrate(rsample::testing(splits)) %>%
+        modeltime_forecast(new_data = rsample::testing(splits),
+                           actual_data = rsample::training(splits)) %>%
+        dplyr::mutate(dplyr::across(.value, exp))
 
 
 
-    testthat::expect_s3_class(wflw_fit$fit$fit$fit, "ets_fit_impl")
+    expect_s3_class(wflw_fit$fit$fit$fit, "ets_fit_impl")
 
     # $fit
 
-    testthat::expect_s3_class(wflw_fit$fit$fit$fit$models$model_1, "ets")
+    expect_s3_class(wflw_fit$fit$fit$fit$models$model_1, "ets")
 
-    testthat::expect_s3_class(wflw_fit$fit$fit$fit$data, "tbl_df")
+    expect_s3_class(wflw_fit$fit$fit$fit$data, "tbl_df")
 
-    testthat::expect_equal(names(wflw_fit$fit$fit$fit$data)[1], "date")
+    expect_equal(names(wflw_fit$fit$fit$fit$data)[1], "date")
 
-    testthat::expect_true(is.null(wflw_fit$fit$fit$fit$extras$xreg_recipe))
+    expect_null(wflw_fit$fit$fit$fit$extras$xreg_recipe)
 
     # $preproc
     mld <- wflw_fit %>% workflows::extract_mold()
-    testthat::expect_equal(names(mld$outcomes), "value")
+    expect_equal(names(mld$outcomes), "value")
 
 
     # exp_smoothing: ets (workflow), Test Predictions
 
-    full_data <- bind_rows(training(splits), testing(splits))
+    full_data <- dplyr::bind_rows(rsample::training(splits), rsample::testing(splits))
 
     # Structure
-    testthat::expect_identical(nrow(full_data), nrow(predictions_tbl))
-    testthat::expect_identical(full_data$date, predictions_tbl$.index)
+    expect_identical(nrow(full_data), nrow(predictions_tbl))
+    expect_identical(full_data$date, predictions_tbl$.index)
 
     # Out-of-Sample Accuracy Tests
-    predictions_tbl <- predictions_tbl %>% filter(.key == "prediction")
-    resid <- testing(splits)$value - predictions_tbl$.value
+    predictions_tbl <- predictions_tbl %>% dplyr::filter(.key == "prediction")
+    resid <- rsample::testing(splits)$value - predictions_tbl$.value
 
     # - Max Error less than 1500
-    testthat::expect_lte(max(abs(resid)), 1500)
+    expect_lte(max(abs(resid)), 1500)
 
     # - MAE less than 700
-    testthat::expect_lte(mean(abs(resid)), 700)
+    expect_lte(mean(abs(resid)), 700)
 
 })
 
@@ -156,7 +156,7 @@ test_that("exp_smoothing: Arima (workflow), Test Model Fit Object", {
 # TESTS
 test_that("exp_smoothing: CROSTON", {
 
-    testthat::skip_on_cran()
+    skip_on_cran()
 
     #
 
@@ -165,62 +165,62 @@ test_that("exp_smoothing: CROSTON", {
     model_spec <- exp_smoothing(
         smooth_level = 0.2
     ) %>%
-        set_engine("croston")
+        parsnip::set_engine("croston")
 
     # Recipe spec
-    recipe_spec <- recipe(value ~ date, data = training(splits)) %>%
-        step_log(value, skip = FALSE)
+    recipe_spec <- recipes::recipe(value ~ date, data = rsample::training(splits)) %>%
+        recipes::step_log(value, skip = FALSE)
 
 
     # Workflow
-    wflw <- workflow() %>%
-        add_recipe(recipe_spec) %>%
-        add_model(model_spec)
+    wflw <- workflows::workflow() %>%
+        workflows::add_recipe(recipe_spec) %>%
+        workflows::add_model(model_spec)
 
     wflw_fit <- wflw %>%
-        fit(training(splits))
+        fit(rsample::training(splits))
 
     # Forecast
     predictions_tbl <- wflw_fit %>%
-        modeltime_calibrate(testing(splits)) %>%
-        modeltime_forecast(new_data = testing(splits),
-                           actual_data = training(splits)) %>%
-        mutate_at(vars(.value), exp)
+        modeltime_calibrate(rsample::testing(splits)) %>%
+        modeltime_forecast(new_data = rsample::testing(splits),
+                           actual_data = rsample::training(splits)) %>%
+        dplyr::mutate(dplyr::across(.value, exp))
 
 
-    testthat::expect_s3_class(wflw_fit$fit$fit$fit, "croston_fit_impl")
+    expect_s3_class(wflw_fit$fit$fit$fit, "croston_fit_impl")
 
     # $fit
 
-    testthat::expect_s3_class(wflw_fit$fit$fit$fit$models$model_1, "forecast")
+    expect_s3_class(wflw_fit$fit$fit$fit$models$model_1, "forecast")
 
-    testthat::expect_s3_class(wflw_fit$fit$fit$fit$data, "tbl_df")
+    expect_s3_class(wflw_fit$fit$fit$fit$data, "tbl_df")
 
-    testthat::expect_equal(names(wflw_fit$fit$fit$fit$data)[1], "date")
+    expect_equal(names(wflw_fit$fit$fit$fit$data)[1], "date")
 
-    testthat::expect_true(is.null(wflw_fit$fit$fit$fit$extras$xreg_recipe))
+    expect_null(wflw_fit$fit$fit$fit$extras$xreg_recipe)
 
     # $preproc
     mld <- wflw_fit %>% workflows::extract_mold()
-    testthat::expect_equal(names(mld$outcomes), "value")
+    expect_equal(names(mld$outcomes), "value")
 
 
 
-    full_data <- bind_rows(training(splits), testing(splits))
+    full_data <- dplyr::bind_rows(rsample::training(splits), rsample::testing(splits))
 
     # Structure
-    testthat::expect_identical(nrow(full_data), nrow(predictions_tbl))
-    testthat::expect_identical(full_data$date, predictions_tbl$.index)
+    expect_identical(nrow(full_data), nrow(predictions_tbl))
+    expect_identical(full_data$date, predictions_tbl$.index)
 
     # Out-of-Sample Accuracy Tests
-    predictions_tbl <- predictions_tbl %>% filter(.key == "prediction")
-    resid <- testing(splits)$value - predictions_tbl$.value
+    predictions_tbl <- predictions_tbl %>% dplyr::filter(.key == "prediction")
+    resid <- rsample::testing(splits)$value - predictions_tbl$.value
 
     # - Max Error less than 1500
-    testthat::expect_lte(max(abs(resid)), 1500)
+    expect_lte(max(abs(resid)), 1500)
 
     # - MAE less than 700
-    testthat::expect_lte(mean(abs(resid)), 1000)
+    expect_lte(mean(abs(resid)), 1000)
 
 })
 
@@ -231,70 +231,70 @@ test_that("exp_smoothing: CROSTON", {
 # TESTS
 test_that("exp_smoothing: Theta", {
 
-    testthat::skip_on_cran()
+    skip_on_cran()
 
     #
 
 
     # Model Spec
     model_spec <- exp_smoothing() %>%
-        set_engine("theta")
+        parsnip::set_engine("theta")
 
     # Recipe spec
-    recipe_spec <- recipe(value ~ date, data = training(splits)) %>%
-        step_log(value, skip = FALSE)
+    recipe_spec <- recipes::recipe(value ~ date, data = rsample::training(splits)) %>%
+        recipes::step_log(value, skip = FALSE)
 
 
     # Workflow
-    wflw <- workflow() %>%
-        add_recipe(recipe_spec) %>%
-        add_model(model_spec)
+    wflw <- workflows::workflow() %>%
+        workflows::add_recipe(recipe_spec) %>%
+        workflows::add_model(model_spec)
 
     wflw_fit <- wflw %>%
-        fit(training(splits))
+        fit(rsample::training(splits))
 
     # Forecast
     predictions_tbl <- wflw_fit %>%
-        modeltime_calibrate(testing(splits)) %>%
-        modeltime_forecast(new_data = testing(splits),
-                           actual_data = training(splits)) %>%
-        mutate_at(vars(.value), exp)
+        modeltime_calibrate(rsample::testing(splits)) %>%
+        modeltime_forecast(new_data = rsample::testing(splits),
+                           actual_data = rsample::training(splits)) %>%
+        dplyr::mutate(dplyr::across(.value, exp))
 
     #
 
-    testthat::expect_s3_class(wflw_fit$fit$fit$fit, "theta_fit_impl")
+    expect_s3_class(wflw_fit$fit$fit$fit, "theta_fit_impl")
 
     # $fit
 
-    testthat::expect_s3_class(wflw_fit$fit$fit$fit$models$model_1, "forecast")
+    expect_s3_class(wflw_fit$fit$fit$fit$models$model_1, "forecast")
 
-    testthat::expect_s3_class(wflw_fit$fit$fit$fit$data, "tbl_df")
+    expect_s3_class(wflw_fit$fit$fit$fit$data, "tbl_df")
 
-    testthat::expect_equal(names(wflw_fit$fit$fit$fit$data)[1], "date")
+    expect_equal(names(wflw_fit$fit$fit$fit$data)[1], "date")
 
-    testthat::expect_true(is.null(wflw_fit$fit$fit$fit$extras$xreg_recipe))
+    expect_null(wflw_fit$fit$fit$fit$extras$xreg_recipe)
 
     # $preproc
     mld <- wflw_fit %>% workflows::extract_mold()
-    testthat::expect_equal(names(mld$outcomes), "value")
+    expect_equal(names(mld$outcomes), "value")
 
 
 
-    full_data <- bind_rows(training(splits), testing(splits))
+    full_data <- dplyr::bind_rows(rsample::training(splits), rsample::testing(splits))
 
     # Structure
-    testthat::expect_identical(nrow(full_data), nrow(predictions_tbl))
-    testthat::expect_identical(full_data$date, predictions_tbl$.index)
+    expect_identical(nrow(full_data), nrow(predictions_tbl))
+    expect_identical(full_data$date, predictions_tbl$.index)
 
     # Out-of-Sample Accuracy Tests
-    predictions_tbl <- predictions_tbl %>% filter(.key == "prediction")
-    resid <- testing(splits)$value - predictions_tbl$.value
+    predictions_tbl <- predictions_tbl %>% dplyr::filter(.key == "prediction")
+    resid <- rsample::testing(splits)$value - predictions_tbl$.value
 
     # - Max Error less than 1500
-    testthat::expect_lte(max(abs(resid)), 2408)
+    expect_lte(max(abs(resid)), 2408)
 
     # - MAE less than 700
-    testthat::expect_lte(mean(abs(resid)), 805)
+    expect_lte(mean(abs(resid)), 805)
 
 })
 
@@ -309,54 +309,54 @@ test_that("exp_smoothing: Theta", {
 # TESTS
 test_that("exp_smoothing: smooth", {
 
-    testthat::skip_on_cran()
+    skip_on_cran()
 
     #
 
     model_spec <- exp_smoothing() %>%
-        set_engine("smooth_es")
+        parsnip::set_engine("smooth_es")
 
     # Fit Spec
     model_fit <- model_spec %>%
-        fit(log(value) ~ date, data = training(splits))
+        fit(log(value) ~ date, data = rsample::training(splits))
 
     # Predictions
     predictions_tbl <- model_fit %>%
-        modeltime_calibrate(testing(splits)) %>%
-        modeltime_forecast(new_data = testing(splits))
+        modeltime_calibrate(rsample::testing(splits)) %>%
+        modeltime_forecast(new_data = rsample::testing(splits))
 
     #
 
-    testthat::expect_s3_class(model_fit$fit, "smooth_fit_impl")
+    expect_s3_class(model_fit$fit, "smooth_fit_impl")
 
     # $fit
 
-    testthat::expect_s3_class(model_fit$fit$models$model_1, "smooth")
+    expect_s3_class(model_fit$fit$models$model_1, "smooth")
 
-    testthat::expect_s3_class(model_fit$fit$data, "tbl_df")
+    expect_s3_class(model_fit$fit$data, "tbl_df")
 
-    testthat::expect_equal(names(model_fit$fit$data)[1], "date")
+    expect_equal(names(model_fit$fit$data)[1], "date")
 
-    testthat::expect_true(is.null(model_fit$fit$extras$xreg_recipe))
+    expect_null(model_fit$fit$extras$xreg_recipe)
 
     # $preproc
 
-    testthat::expect_equal(model_fit$preproc$y_var, "value")
+    expect_equal(model_fit$preproc$y_var, "value")
 
 
     # Structure
-    testthat::expect_identical(nrow(testing(splits)), nrow(predictions_tbl))
-    testthat::expect_identical(testing(splits)$date, predictions_tbl$.index)
+    expect_identical(nrow(rsample::testing(splits)), nrow(predictions_tbl))
+    expect_identical(rsample::testing(splits)$date, predictions_tbl$.index)
 
     # Out-of-Sample Accuracy Tests
 
-    resid <- testing(splits)$value - exp(predictions_tbl$.value)
+    resid <- rsample::testing(splits)$value - exp(predictions_tbl$.value)
 
     # - Max Error less than 1500
-    testthat::expect_lte(max(abs(resid)), 1395)
+    expect_lte(max(abs(resid)), 1395)
 
     # - MAE less than 700
-    testthat::expect_lte(mean(abs(resid)), 750)
+    expect_lte(mean(abs(resid)), 750)
 
 })
 
@@ -370,7 +370,7 @@ test_that("exp_smoothing: smooth", {
 # TESTS
 test_that("exp_smoothing: Arima (workflow), Test Model Fit Object", {
 
-    testthat::skip_on_cran()
+    skip_on_cran()
 
     #
 
@@ -382,69 +382,69 @@ test_that("exp_smoothing: Arima (workflow), Test Model Fit Object", {
         ,
         smooth_level = 0.2, smooth_trend = 0.1, smooth_seasonal = 0.1
     ) %>%
-        set_engine("smooth_es")
+        parsnip::set_engine("smooth_es")
 
     # Recipe spec
-    recipe_spec <- recipe(value ~ date, data = training(splits)) %>%
-        step_log(value, skip = FALSE) %>%
-        step_date(date, features = "month")
+    recipe_spec <- recipes::recipe(value ~ date, data = rsample::training(splits)) %>%
+        recipes::step_log(value, skip = FALSE) %>%
+        recipes::step_date(date, features = "month")
 
     # Workflow
-    wflw <- workflow() %>%
-        add_recipe(recipe_spec) %>%
-        add_model(model_spec)
+    wflw <- workflows::workflow() %>%
+        workflows::add_recipe(recipe_spec) %>%
+        workflows::add_model(model_spec)
 
     # xreg did not contain values for the holdout, so we had to predict missing values.
     suppressWarnings({
         wflw_fit <- wflw %>%
-            fit(training(splits))
+            fit(rsample::training(splits))
     })
 
     # Forecast
     suppressWarnings({
         predictions_tbl <- wflw_fit %>%
-            modeltime_calibrate(testing(splits)) %>%
-            modeltime_forecast(new_data = testing(splits),
-                               actual_data = training(splits)) %>%
-            mutate_at(vars(.value, .conf_lo, .conf_hi), exp)
+            modeltime_calibrate(rsample::testing(splits)) %>%
+            modeltime_forecast(new_data = rsample::testing(splits),
+                               actual_data = rsample::training(splits)) %>%
+            dplyr::mutate(dplyr::across(c(.value, .conf_lo, .conf_hi), exp))
     })
 
     #
 
-    testthat::expect_s3_class(wflw_fit$fit$fit$fit, "smooth_fit_impl")
+    expect_s3_class(wflw_fit$fit$fit$fit, "smooth_fit_impl")
 
     # $fit
 
-    testthat::expect_s3_class(wflw_fit$fit$fit$fit$models$model_1, "smooth")
+    expect_s3_class(wflw_fit$fit$fit$fit$models$model_1, "smooth")
 
-    testthat::expect_s3_class(wflw_fit$fit$fit$fit$data, "tbl_df")
+    expect_s3_class(wflw_fit$fit$fit$fit$data, "tbl_df")
 
-    testthat::expect_equal(names(wflw_fit$fit$fit$fit$data)[1], "date")
+    expect_equal(names(wflw_fit$fit$fit$fit$data)[1], "date")
 
-    testthat::expect_true(!is.null(wflw_fit$fit$fit$fit$extras$xreg_recipe))
+    expect_true(!is.null(wflw_fit$fit$fit$fit$extras$xreg_recipe))
 
     # $preproc
     mld <- wflw_fit %>% workflows::extract_mold()
-    testthat::expect_equal(names(mld$outcomes), "value")
+    expect_equal(names(mld$outcomes), "value")
 
 
     # exp_smoothing: ets (workflow), Test Predictions
 
-    full_data <- bind_rows(training(splits), testing(splits))
+    full_data <- dplyr::bind_rows(rsample::training(splits), rsample::testing(splits))
 
     # Structure
-    testthat::expect_identical(nrow(full_data), nrow(predictions_tbl))
-    testthat::expect_identical(full_data$date, predictions_tbl$.index)
+    expect_identical(nrow(full_data), nrow(predictions_tbl))
+    expect_identical(full_data$date, predictions_tbl$.index)
 
     # Out-of-Sample Accuracy Tests
-    predictions_tbl <- predictions_tbl %>% filter(.key == "prediction")
-    resid <- testing(splits)$value - predictions_tbl$.value
+    predictions_tbl <- predictions_tbl %>% dplyr::filter(.key == "prediction")
+    resid <- rsample::testing(splits)$value - predictions_tbl$.value
 
     # - Max Error less than 1500
-    # testthat::expect_lte(max(abs(resid)), 1395)
+    # expect_lte(max(abs(resid)), 1395)
 
     # - MAE less than 700
-    # testthat::expect_lte(mean(abs(resid)), 750)
+    # expect_lte(mean(abs(resid)), 750)
 
 })
 

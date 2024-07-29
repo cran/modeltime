@@ -67,7 +67,7 @@ unless overridden in the holidays input.}
 
 \item{mtry}{A number for the number (or proportion) of predictors that will
 be randomly sampled at each split when creating the tree models
-(specific engines only)}
+(specific engines only).}
 
 \item{trees}{An integer for the number of trees contained in
 the ensemble.}
@@ -296,7 +296,6 @@ library(lubridate)
 library(parsnip)
 library(rsample)
 library(timetk)
-library(modeltime)
 
 # Data
 m750 <- m4_monthly \%>\% filter(id == "M750")
@@ -325,5 +324,5 @@ model_fit
 
 }
 \seealso{
-\code{\link[=fit.model_spec]{fit.model_spec()}}, \code{\link[=set_engine]{set_engine()}}
+\code{fit.model_spec()}, \code{set_engine()}
 }

@@ -5,10 +5,10 @@ context("TEST arima_boost: auto_arima_xgboost")
 # SETUP ----
 
 # Data
-m750 <- m4_monthly %>% filter(id == "M750")
+m750 <- timetk::m4_monthly %>% dplyr::filter(id == "M750")
 
 # Split Data 80/20
-splits <- initial_time_split(m750, prop = 0.8)
+splits <- rsample::initial_time_split(m750, prop = 0.8)
 
 # Model Spec
 model_spec <- arima_boost(
@@ -27,7 +27,7 @@ model_spec <- arima_boost(
     loss_reduction = 0.4,
     sample_size = 0.9
 ) %>%
-    set_engine("auto_arima_xgboost")
+    parsnip::set_engine("auto_arima_xgboost")
 
 
 # PARSNIP ----
@@ -38,55 +38,55 @@ model_spec <- arima_boost(
 # TESTS
 test_that("arima_boost: Arima, (No xregs), Test Model Fit Object", {
 
-    testthat::skip_on_cran()
+    skip_on_cran()
 
     # Fit Spec
     model_fit <- model_spec %>%
-        fit(log(value) ~ date, data = training(splits))
+        fit(log(value) ~ date, data = rsample::training(splits))
 
     # Predictions
     predictions_tbl <- model_fit %>%
-        modeltime_calibrate(testing(splits)) %>%
-        modeltime_forecast(new_data = testing(splits))
+        modeltime_calibrate(rsample::testing(splits)) %>%
+        modeltime_forecast(new_data = rsample::testing(splits))
 
     # TEST
 
-    testthat::expect_s3_class(model_fit$fit, "auto_arima_xgboost_fit_impl")
+    expect_s3_class(model_fit$fit, "auto_arima_xgboost_fit_impl")
 
     # $fit
 
-    testthat::expect_s3_class(model_fit$fit$models$model_1, "Arima")
+    expect_s3_class(model_fit$fit$models$model_1, "Arima")
 
-    testthat::expect_s3_class(model_fit$fit$data, "tbl_df")
+    expect_s3_class(model_fit$fit$data, "tbl_df")
 
-    testthat::expect_equal(names(model_fit$fit$data)[1], "date")
+    expect_equal(names(model_fit$fit$data)[1], "date")
 
-    testthat::expect_true(is.null(model_fit$fit$extras$xreg_recipe))
+    expect_null(model_fit$fit$extras$xreg_recipe)
 
     # $fit xgboost
 
-    testthat::expect_identical(model_fit$fit$models$model_2, NULL)
+    expect_identical(model_fit$fit$models$model_2, NULL)
 
     # $preproc
 
-    testthat::expect_equal(model_fit$preproc$y_var, "value")
+    expect_equal(model_fit$preproc$y_var, "value")
 
 
     # PREDICTIONS
 
     # Structure
-    testthat::expect_identical(nrow(testing(splits)), nrow(predictions_tbl))
-    testthat::expect_identical(testing(splits)$date, predictions_tbl$.index)
+    expect_identical(nrow(rsample::testing(splits)), nrow(predictions_tbl))
+    expect_identical(rsample::testing(splits)$date, predictions_tbl$.index)
 
     # Out-of-Sample Accuracy Tests
 
-    resid <- testing(splits)$value - exp(predictions_tbl$.value)
+    resid <- rsample::testing(splits)$value - exp(predictions_tbl$.value)
 
     # - Max Error less than 1500
-    testthat::expect_lte(max(abs(resid)), 1500)
+    expect_lte(max(abs(resid)), 1500)
 
     # - MAE less than 700
-    testthat::expect_lte(mean(abs(resid)), 700)
+    expect_lte(mean(abs(resid)), 700)
 
 })
 
@@ -101,64 +101,64 @@ test_that("arima_boost: Arima, (XREGS), Test Model Fit Object", {
 
     # Fit Spec
     model_fit <- model_spec %>%
-        fit(log(value) ~ date + as.numeric(date) + month(date, label = TRUE), data = training(splits))
+        fit(log(value) ~ date + as.numeric(date) + lubridate::month(date, label = TRUE), data = rsample::training(splits))
 
     # Predictions
     predictions_tbl <- model_fit %>%
-        modeltime_calibrate(testing(splits)) %>%
-        modeltime_forecast(new_data = testing(splits))
+        modeltime_calibrate(rsample::testing(splits)) %>%
+        modeltime_forecast(new_data = rsample::testing(splits))
 
-    testthat::expect_s3_class(model_fit$fit, "auto_arima_xgboost_fit_impl")
+    expect_s3_class(model_fit$fit, "auto_arima_xgboost_fit_impl")
 
     # Structure
 
-    testthat::expect_s3_class(model_fit$fit$data, "tbl_df")
+    expect_s3_class(model_fit$fit$data, "tbl_df")
 
-    testthat::expect_equal(names(model_fit$fit$data)[1], "date")
+    expect_equal(names(model_fit$fit$data)[1], "date")
 
-    testthat::expect_true(!is.null(model_fit$fit$extras$xreg_recipe))
+    expect_true(!is.null(model_fit$fit$extras$xreg_recipe))
 
     # $fit arima
 
-    testthat::expect_s3_class(model_fit$fit$models$model_1, "Arima")
+    expect_s3_class(model_fit$fit$models$model_1, "Arima")
 
     # $fit xgboost
 
-    testthat::expect_s3_class(model_fit$fit$models$model_2, "xgb.Booster")
+    expect_s3_class(model_fit$fit$models$model_2, "xgb.Booster")
 
-    testthat::expect_identical(model_fit$fit$models$model_2$params$eta, 0.1)
+    expect_identical(model_fit$fit$models$model_2$params$eta, 0.1)
 
-    testthat::expect_identical(model_fit$fit$models$model_2$params$max_depth, 7)
+    expect_identical(model_fit$fit$models$model_2$params$max_depth, 7)
 
-    testthat::expect_identical(model_fit$fit$models$model_2$params$gamma, 0.4)
+    expect_identical(model_fit$fit$models$model_2$params$gamma, 0.4)
 
-    testthat::expect_identical(model_fit$fit$models$model_2$params$colsample_bytree, 1)
+    expect_identical(model_fit$fit$models$model_2$params$colsample_bytree, 1)
 
-    testthat::expect_identical(model_fit$fit$models$model_2$params$min_child_weight, 4)
+    expect_identical(model_fit$fit$models$model_2$params$min_child_weight, 4)
 
-    testthat::expect_identical(model_fit$fit$models$model_2$params$subsample, 0.9)
+    expect_identical(model_fit$fit$models$model_2$params$subsample, 0.9)
 
-    testthat::expect_identical(model_fit$fit$models$model_2$params$objective, "reg:squarederror")
+    expect_identical(model_fit$fit$models$model_2$params$objective, "reg:squarederror")
 
     # $preproc
 
-    testthat::expect_equal(model_fit$preproc$y_var, "value")
+    expect_equal(model_fit$preproc$y_var, "value")
 
     # PREDICTIONS
 
     # Structure
-    testthat::expect_identical(nrow(testing(splits)), nrow(predictions_tbl))
-    testthat::expect_identical(testing(splits)$date, predictions_tbl$.index)
+    expect_identical(nrow(rsample::testing(splits)), nrow(predictions_tbl))
+    expect_identical(rsample::testing(splits)$date, predictions_tbl$.index)
 
     # Out-of-Sample Accuracy Tests
 
-    resid <- testing(splits)$value - exp(predictions_tbl$.value)
+    resid <- rsample::testing(splits)$value - exp(predictions_tbl$.value)
 
     # - Max Error less than 1500
-    testthat::expect_lte(max(abs(resid)), 1500)
+    expect_lte(max(abs(resid)), 1500)
 
     # - MAE less than 700
-    testthat::expect_lte(mean(abs(resid)), 700)
+    expect_lte(mean(abs(resid)), 700)
 
 })
 
@@ -189,85 +189,85 @@ test_that("arima_boost: Arima (workflow), Test Model Fit Object", {
         loss_reduction = 0.4,
         sample_size = 0.9
     ) %>%
-        set_engine("auto_arima_xgboost")
+        parsnip::set_engine("auto_arima_xgboost")
 
     # Recipe spec
-    recipe_spec <- recipe(value ~ date, data = training(splits)) %>%
-        step_log(value, skip = FALSE) %>%
-        step_date(date, features = "month") %>%
-        step_mutate(date_num = as.numeric(date))
+    recipe_spec <- recipes::recipe(value ~ date, data = rsample::training(splits)) %>%
+        recipes::step_log(value, skip = FALSE) %>%
+        recipes::step_date(date, features = "month") %>%
+        recipes::step_mutate(date_num = as.numeric(date))
 
     # Workflow
-    wflw <- workflow() %>%
-        add_recipe(recipe_spec) %>%
-        add_model(model_spec)
+    wflw <- workflows::workflow() %>%
+        workflows::add_recipe(recipe_spec) %>%
+        workflows::add_model(model_spec)
 
     wflw_fit <- wflw %>%
-        fit(training(splits))
+        fit(rsample::training(splits))
 
     # Forecast
     predictions_tbl <- wflw_fit %>%
-        modeltime_calibrate(testing(splits)) %>%
-        modeltime_forecast(new_data = testing(splits), actual_data = training(splits)) %>%
-        mutate_at(vars(.value), exp)
+        modeltime_calibrate(rsample::testing(splits)) %>%
+        modeltime_forecast(new_data = rsample::testing(splits), actual_data = rsample::training(splits)) %>%
+        dplyr::mutate(dplyr::across(.value, exp))
 
 
     # TESTS
 
-    testthat::expect_s3_class(wflw_fit$fit$fit$fit, "auto_arima_xgboost_fit_impl")
+    expect_s3_class(wflw_fit$fit$fit$fit, "auto_arima_xgboost_fit_impl")
 
     # Structure
 
-    testthat::expect_s3_class(wflw_fit$fit$fit$fit$data, "tbl_df")
+    expect_s3_class(wflw_fit$fit$fit$fit$data, "tbl_df")
 
-    testthat::expect_equal(names(wflw_fit$fit$fit$fit$data)[1], "date")
+    expect_equal(names(wflw_fit$fit$fit$fit$data)[1], "date")
 
-    testthat::expect_true(!is.null(wflw_fit$fit$fit$fit$extras$xreg_recipe))
+    expect_true(!is.null(wflw_fit$fit$fit$fit$extras$xreg_recipe))
 
     # $fit arima
 
-    testthat::expect_s3_class(wflw_fit$fit$fit$fit$models$model_1, "Arima")
+    expect_s3_class(wflw_fit$fit$fit$fit$models$model_1, "Arima")
 
     # $fit xgboost
 
-    testthat::expect_s3_class(wflw_fit$fit$fit$fit$models$model_2, "xgb.Booster")
+    expect_s3_class(wflw_fit$fit$fit$fit$models$model_2, "xgb.Booster")
 
-    testthat::expect_identical(wflw_fit$fit$fit$fit$models$model_2$params$eta, 0.1)
+    expect_identical(wflw_fit$fit$fit$fit$models$model_2$params$eta, 0.1)
 
-    testthat::expect_identical(wflw_fit$fit$fit$fit$models$model_2$params$max_depth, 7)
+    expect_identical(wflw_fit$fit$fit$fit$models$model_2$params$max_depth, 7)
 
-    testthat::expect_identical(wflw_fit$fit$fit$fit$models$model_2$params$gamma, 0.4)
+    expect_identical(wflw_fit$fit$fit$fit$models$model_2$params$gamma, 0.4)
 
-    testthat::expect_identical(wflw_fit$fit$fit$fit$models$model_2$params$colsample_bytree, 1)
+    expect_identical(wflw_fit$fit$fit$fit$models$model_2$params$colsample_bytree, 1)
 
-    testthat::expect_identical(wflw_fit$fit$fit$fit$models$model_2$params$min_child_weight, 4)
+    expect_identical(wflw_fit$fit$fit$fit$models$model_2$params$min_child_weight, 4)
 
-    testthat::expect_identical(wflw_fit$fit$fit$fit$models$model_2$params$subsample, 0.9)
+    expect_identical(wflw_fit$fit$fit$fit$models$model_2$params$subsample, 0.9)
 
-    testthat::expect_identical(wflw_fit$fit$fit$fit$models$model_2$params$objective, "reg:squarederror")
+    expect_identical(wflw_fit$fit$fit$fit$models$model_2$params$objective, "reg:squarederror")
 
 
     # $preproc
     mld <- wflw_fit %>% workflows::extract_mold()
-    testthat::expect_equal(names(mld$outcomes), "value")
+    expect_equal(names(mld$outcomes), "value")
 
     # PREDICTIONS
 
-    full_data <- bind_rows(training(splits), testing(splits))
+    full_data <- dplyr::bind_rows(rsample::training(splits), rsample::testing(splits))
 
     # Structure
-    testthat::expect_identical(nrow(full_data), nrow(predictions_tbl))
-    testthat::expect_identical(full_data$date, predictions_tbl$.index)
+    expect_identical(nrow(full_data), nrow(predictions_tbl))
+    expect_identical(full_data$date, predictions_tbl$.index)
 
     # Out-of-Sample Accuracy Tests
-    predictions_tbl <- predictions_tbl %>% filter(.key == "prediction")
-    resid <- testing(splits)$value - predictions_tbl$.value
+    predictions_tbl <- predictions_tbl %>% dplyr::filter(.key == "prediction")
+    resid <- rsample::testing(splits)$value - predictions_tbl$.value
 
     # - Max Error less than 1500
-    testthat::expect_lte(max(abs(resid)), 1500)
+    expect_lte(max(abs(resid)), 1500)
 
     # - MAE less than 700
-    testthat::expect_lte(mean(abs(resid)), 700)
+    expect_lte(mean(abs(resid)), 700)
 
 })
 

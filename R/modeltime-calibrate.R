@@ -7,8 +7,8 @@
 #'
 #' @param object A fitted model object that is either:
 #' 1. A modeltime table that has been created using [modeltime_table()]
-#' 2. A workflow that has been fit by [fit.workflow()] or
-#' 3. A parsnip model that has been fit using [fit.model_spec()]
+#' 2. A workflow that has been fit by `fit.workflow()` or
+#' 3. A parsnip model that has been fit using `fit.model_spec()`
 #' @param new_data A test data set `tibble` containing future information (timestamps and actual values).
 #' @param id A quoted column name containing an identifier column identifying time series that are grouped.
 #' @param quiet Hide errors (`TRUE`, the default), or display them as they occur?
@@ -39,12 +39,11 @@
 #'
 #'
 #' @examples
-#' library(tidyverse)
+#' library(dplyr)
 #' library(lubridate)
 #' library(timetk)
 #' library(parsnip)
 #' library(rsample)
-#' library(modeltime)
 #'
 #' # Data
 #' m750 <- m4_monthly %>% filter(id == "M750")
@@ -97,7 +96,7 @@ modeltime_calibrate <- function(object, new_data, id = NULL,
 
     # Checks
     if (rlang::is_missing(new_data)) {
-        glubort("Missing 'new_data'. Try adding a test data set using rsample::testing(splits). See help for more info: ?modeltime_calibrate ")
+        cli::cli_abort("Missing 'new_data'. Try adding a test data set using rsample::testing(splits). See help for more info: {.help modeltime::modeltime_calibrate}.")
     }
 
     # Check `id` is in `new_data` names
@@ -106,12 +105,12 @@ modeltime_calibrate <- function(object, new_data, id = NULL,
         tryCatch({
             id
         }, error = function(e) {
-            rlang::abort("`id` must be a quoted character string that is the name of an identifier column. ")
+            rlang::abort("`id` must be a quoted character string that is the name of an identifier column.")
         })
 
-        if (!is.character(id)) rlang::abort("`id` must be a quoted character string that is the name of an identifier column. ")
+        if (!is.character(id)) rlang::abort("`id` must be a quoted character string that is the name of an identifier column.")
 
-        if (!id %in% names(new_data)) glubort("`id` is not a valid column name in `new_data`. Please review column names: {stringr::str_c(names(new_data), collapse = ', ')}")
+        if (!id %in% names(new_data)) cli::cli_abort("`id` is not a valid column name in `new_data`. Please review column names: {(names(new_data)}.")
 
     }
 
@@ -121,7 +120,12 @@ modeltime_calibrate <- function(object, new_data, id = NULL,
 #' @export
 modeltime_calibrate.default <- function(object, new_data, id = NULL,
                                         quiet = TRUE, ...) {
-    glubort("Received an object of class: {class(object)[1]}. Expected an object of class:\n 1. 'workflow' - That has been fitted (trained).\n 2. 'model_fit' - A fitted parsnip model.\n 3. 'mdl_time_tbl' - A Model Time Table made with 'modeltime_table()'.")
+    cli::cli_abort(c(
+        x = "Received an object of class: {.obj_type_friendly {object}}.",
+        i = "Expected an object of class:",
+        "1. 'workflow' - That has been fitted (trained).",
+        "2. 'model_fit' - A fitted parsnip model.",
+        "3. 'mdl_time_tbl' - A Model Time Table made with 'modeltime_table()'."))
 }
 
 #' @export

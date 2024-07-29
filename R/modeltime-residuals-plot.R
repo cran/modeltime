@@ -1,9 +1,9 @@
 #' Interactive Residuals Visualization
 #'
 #' This is a wrapper for examining residuals using:
-#' - Time Plot: [plot_time_series()]
-#' - ACF Plot: [plot_acf_diagnostics()]
-#' - Seasonality Plot: [plot_seasonal_diagnostics()]
+#' - Time Plot: `timetk::plot_time_series()`
+#' - ACF Plot: `timetk::plot_acf_diagnostics()`
+#' - Seasonality Plot: `timetk::plot_seasonal_diagnostics()`
 #'
 #'
 #' @inheritParams timetk::plot_time_series
@@ -13,20 +13,18 @@
 #'  Can save space with long model descriptions.
 #' @param .legend_max_width Numeric. The width of truncation to apply to the legend text.
 #' @param ... Additional arguments passed to:
-#' - Time Plot: [plot_time_series()]
-#' - ACF Plot: [plot_acf_diagnostics()]
-#' - Seasonality Plot: [plot_seasonal_diagnostics()]
+#' - Time Plot: `timetk::plot_time_series()`
+#' - ACF Plot: `timetk::plot_acf_diagnostics()`
+#' - Seasonality Plot: `timetk::plot_seasonal_diagnostics()`
 #'
 #' @return A static `ggplot2` plot or an interactive `plotly` plot containing residuals vs time
 #'
 #'
 #' @examples
-#' library(tidyverse)
-#' library(lubridate)
+#' library(dplyr)
 #' library(timetk)
 #' library(parsnip)
 #' library(rsample)
-#' library(modeltime)
 #'
 #' # Data
 #' m750 <- m4_monthly %>% filter(id == "M750")
@@ -75,7 +73,7 @@ plot_modeltime_residuals <- function(.data,
 
     # Checks
     if (!inherits(.data, "data.frame")) {
-        glubort("No method for {class(.data)[1]}. Expecting the output of 'modeltime_residuals()'.")
+        cli::cli_abort("No method for {.obj_type_friendly {(.data)}}. Expecting the output of 'modeltime_residuals()'.")
     }
 
     if (!all(c(".model_id", ".model_desc", ".type", ".index", ".actual", ".prediction", ".residuals") %in% names(.data))) {

@@ -83,12 +83,11 @@ Table customization is implemented using a piping workflow (\verb{\%>\%}).
 For more information, refer to the \href{https://gt.rstudio.com/index.html}{GT Documentation}.
 }
 \examples{
-library(tidyverse)
+library(dplyr)
 library(lubridate)
 library(timetk)
 library(parsnip)
 library(rsample)
-library(modeltime)
 
 # Data
 m750 <- m4_monthly \%>\% filter(id == "M750")

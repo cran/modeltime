@@ -7,29 +7,27 @@ test_that("Confidence and Accuracy by ID", {
 
     library(tidymodels)
     library(timetk)
-    library(modeltime)
-    library(tidyverse)
+    library(dplyr)
 
     # Data
     data <- walmart_sales_weekly %>%
-        select(id, Date, Weekly_Sales) %>%
-        set_names(c("ID", "date", "value"))
+        dplyr::select(ID = id, date = Date, value = Weekly_Sales)
 
     splits <- data %>% time_series_split(assess = "3 months", cumulative = TRUE)
 
-    rec_obj <- recipe(value ~ ., training(splits)) %>%
+    rec_obj <- recipes::recipe(value ~ ., rsample::training(splits)) %>%
         step_timeseries_signature(date) %>%
-        step_rm(date) %>%
-        step_zv(all_predictors()) %>%
-        step_dummy(all_nominal_predictors(), one_hot = TRUE)
+        recipes::step_rm(date) %>%
+        recipes::step_zv(recipes::all_predictors()) %>%
+        recipes::step_dummy(recipes::all_nominal_predictors(), one_hot = TRUE)
 
 
-    wflw_xgb <- workflow() %>%
-        add_model(
-            boost_tree("regression") %>% set_engine("xgboost")
+    wflw_xgb <- workflows::workflow() %>%
+        workflows::add_model(
+            boost_tree("regression") %>% parsnip::set_engine("xgboost")
         ) %>%
-        add_recipe(rec_obj) %>%
-        fit(training(splits))
+        workflows::add_recipe(rec_obj) %>%
+        fit(rsample::training(splits))
 
 
     model_tbl <- modeltime_table(
@@ -40,7 +38,7 @@ test_that("Confidence and Accuracy by ID", {
 
     # CALIBRATION BY ID ----
 
-    test_data <- testing(splits) %>% arrange(ID, date)
+    test_data <- rsample::testing(splits) %>% dplyr::arrange(ID, date)
 
     calib_tbl <- model_tbl %>%
         modeltime_calibrate(new_data = test_data, id = "ID")
@@ -51,7 +49,7 @@ test_that("Confidence and Accuracy by ID", {
     expect_equal(names(df)[5], "ID")
 
     expect_equal(
-        df %>% select(ID, date, .actual) %>% rename(value = .actual),
+        df %>% dplyr::select(ID, date, value = .actual),
         test_data
     )
 
@@ -77,7 +75,7 @@ test_that("Confidence and Accuracy by ID", {
 
     forecast_tbl <- calib_tbl %>%
         modeltime_forecast(
-            new_data    = testing(splits),
+            new_data    = rsample::testing(splits),
             actual_data = NULL,
             conf_by_id  = TRUE
         )

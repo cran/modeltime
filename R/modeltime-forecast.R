@@ -156,12 +156,10 @@
 #' _Journal of the American Statistical Association_ 113.523 (2018): 1094-1111.
 #'
 #' @examples
-#' library(tidyverse)
-#' library(lubridate)
+#' library(dplyr)
 #' library(timetk)
 #' library(parsnip)
 #' library(rsample)
-#' library(modeltime)
 #'
 #' # Data
 #' m750 <- m4_monthly %>% filter(id == "M750")
@@ -283,7 +281,9 @@ modeltime_forecast <- function(object, new_data = NULL, h = NULL, actual_data = 
 modeltime_forecast.default <- function(object, new_data = NULL, h = NULL, actual_data = NULL,
                                        conf_interval = 0.95, conf_by_id = FALSE,  conf_method = "conformal_default",
                                        keep_data = FALSE, arrange_index = FALSE, ...) {
-    glubort("Received an object of class: {class(object)[1]}. Expected an object of class:\n 1. 'mdl_time_tbl' - A Model Time Table made with 'modeltime_table()' and calibrated with 'modeltime_calibrate()'.")
+    cli::cli_abort(c("Received an object of class: {.obj_type_friendly {object}}.",
+                     "Expected an object of class:",
+                     "1. 'mdl_time_tbl' - A Model Time Table made with 'modeltime_table()' and calibrated with 'modeltime_calibrate()'."))
 }
 
 #' @export
@@ -297,7 +297,7 @@ modeltime_forecast.mdl_time_tbl <- function(object, new_data = NULL, h = NULL, a
 
     # HANDLE CALIBRATION DATA
     if (!all(c(".type", ".calibration_data") %in% names(data))) {
-        # glubort("Expecting columns '.type' and '.calibration_data'. Try running 'modeltime_calibrate()' before using 'modeltime_forecast()'.")
+        # cli::cli_abort("Expecting columns '.type' and '.calibration_data'. Try running 'modeltime_calibrate()' before using 'modeltime_forecast()'.")
         conf_interval = NULL
         data <- data %>%
             dplyr::mutate(
@@ -382,7 +382,7 @@ modeltime_forecast.mdl_time_tbl <- function(object, new_data = NULL, h = NULL, a
                         conf_method   = conf_method,
                         id            = !! id_col
                     ) %>%
-                    dplyr::select(.model_id, .model_desc, .key, .index, .value, .conf_lo, .conf_hi, dplyr::all_of(names(new_data)))
+                    dplyr::select(".model_id", ".model_desc", ".key", ".index", ".value", ".conf_lo", ".conf_hi", dplyr::all_of(names(new_data)))
 
                 # Remove unnecessary columns if `keep_data = FALSE`. Required to keep the id column.
                 if (!keep_data) {
@@ -431,7 +431,37 @@ modeltime_forecast.mdl_time_tbl <- function(object, new_data = NULL, h = NULL, a
     ret <- ret %>%
         dplyr::filter(.model_desc == "ACTUAL" | .key == "prediction")
 
+
+    # STRUCTURE ----
+    class(ret) <- c("mdl_forecast_tbl", class(ret))
+
+    attr(ret, "conf_interval") <- conf_interval
+    attr(ret, "conf_method")   <- conf_method
+    attr(ret, "conf_by_id")    <- conf_by_id
+
     return(ret)
+}
+
+#' @export
+print.mdl_forecast_tbl <- function(x, ...) {
+
+    # Collect inputs
+    conf_interval <- attr(x, 'conf_interval')
+    conf_method   <- attr(x, 'conf_method')
+    conf_by_id    <- attr(x, 'conf_by_id')
+
+    conf_by_id_desc <- if (conf_by_id) {
+        "LOCAL CONFIDENCE"
+    } else {
+        "GLOBAL CONFIDENCE"
+    }
+
+    cat("# Forecast Results\n")
+    cat("  ")
+    cli::cli_text(cli::col_grey("Conf Method: {conf_method} | Conf Interval: {conf_interval} | Conf By ID: {conf_by_id} ({conf_by_id_desc})"))
+    # cli::cli_rule()
+    class(x) <- class(x)[!(class(x) %in% c("mdl_forecast_tbl"))]
+    print(x, ...)
 }
 
 
@@ -734,16 +764,15 @@ mdl_time_forecast.model_fit <- function(object, calibration_data, new_data = NUL
     }, error = function(e) {
         if (any(c(h_provided, calib_provided))) {
             # Most likely issue: need to provide external regressors
-            glubort("Problem occurred during prediction. Most likely cause is missing external regressors. Try using 'new_data' and supply a dataset containing all required columns. {e}")
+            cli::cli_abort("Problem occurred during prediction. Most likely cause is missing external regressors. Try using 'new_data' and supply a dataset containing all required columns. {e}")
         } else {
-            glubort("Problem occurred during prediction. {e}")
+            cli::cli_abort("Problem occurred during prediction. {e}")
         }
     })
 
     # Format data
     data_formatted <- modeltime_forecast %>%
-        dplyr::mutate(.key = "prediction") %>%
-        dplyr::select(.key, dplyr::everything())
+        dplyr::mutate(.key = "prediction", .before = 0)
 
     # COMBINE ACTUAL DATA
 
@@ -845,8 +874,7 @@ mdl_time_forecast.model_fit <- function(object, calibration_data, new_data = NUL
 
     # FINALIZE
     ret <- data_formatted %>%
-        dplyr::rename(.value = .pred) %>%
-        dplyr::select(.key, .index, .value) %>%
+        dplyr::select(.key, .index, .value = .pred) %>%
         dplyr::mutate(.key = factor(.key, levels = c("actual", "prediction")))
 
     # Keep Data
@@ -955,9 +983,9 @@ mdl_time_forecast.workflow <- function(object, calibration_data, new_data = NULL
     }, error = function(e) {
         if (any(c(h_provided, calib_provided))) {
             # Most likely issue: need to provide external regressors
-            glubort("Problem occurred in getting predictors from new data. Most likely cause is missing external regressors. Try using 'new_data' and supply a dataset containing all required columns. {e}")
+            cli::cli_abort("Problem occurred in getting predictors from new data. Most likely cause is missing external regressors. Try using 'new_data' and supply a dataset containing all required columns. {e}")
         } else {
-            glubort("Problem occurred getting predictors from new data. {e}")
+            cli::cli_abort("Problem occurred getting predictors from new data. {e}")
         }
     })
 
@@ -988,7 +1016,7 @@ mdl_time_forecast.workflow <- function(object, calibration_data, new_data = NULL
                 time_stamp_predictors_tbl <- new_data_forged$predictors %>%
                     dplyr::mutate(.index = idx[new_data_missing_removed_tbl$..id])
             } else {
-                glubort("Problem occurred combining processed data with timestamps. Most likely cause is rows being added or removed during preprocessing. Try imputing missing values to retain the full number of rows.")
+                cli::cli_abort("Problem occurred combining processed data with timestamps. Most likely cause is rows being added or removed during preprocessing. Try imputing missing values to retain the full number of rows.")
             }
         }
     }
@@ -1042,8 +1070,7 @@ mdl_time_forecast.workflow <- function(object, calibration_data, new_data = NULL
 
     data_formatted <- data_formatted %>%
         dplyr::bind_cols(time_stamp_predictors_tbl) %>%
-        dplyr::mutate(.key = "prediction") %>%
-        dplyr::select(.key, dplyr::everything())
+        dplyr::mutate(.key = "prediction", .before = 0)
 
 
     # COMBINE ACTUAL DATA
@@ -1146,8 +1173,7 @@ mdl_time_forecast.workflow <- function(object, calibration_data, new_data = NULL
     }
 
     ret <- data_formatted %>%
-        dplyr::rename(.value = .pred) %>%
-        dplyr::select(.key, .index, .value) %>%
+        dplyr::select(.key, .index, .value = .pred) %>%
         dplyr::mutate(.key = factor(.key, levels = c("actual", "prediction")))
 
     # Keep Data

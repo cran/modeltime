@@ -34,12 +34,10 @@ Converts a \code{list} of models to a modeltime table. Useful if programatically
 Modeltime Tables from models stored in a \code{list}.
 }
 \examples{
-library(tidyverse)
-library(lubridate)
+library(dplyr)
 library(timetk)
 library(parsnip)
 library(rsample)
-library(modeltime)
 
 # Data
 m750 <- m4_monthly \%>\% filter(id == "M750")

@@ -5,10 +5,10 @@ context("TEST prophet_reg: prophet")
 # SETUP ----
 
 # Data
-m750 <- m4_monthly %>% filter(id == "M750")
+m750 <- timetk::m4_monthly %>% dplyr::filter(id == "M750")
 
 # Split Data 80/20
-splits <- initial_time_split(m750, prop = 0.8)
+splits <- rsample::initial_time_split(m750, prop = 0.8)
 
 # Model Spec
 model_spec <- prophet_reg(
@@ -23,7 +23,7 @@ model_spec <- prophet_reg(
     prior_scale_seasonality  = 20,
     prior_scale_holidays     = 20
 ) %>%
-    set_engine("prophet")
+    parsnip::set_engine("prophet")
 
 
 # PARSNIP ----
@@ -32,69 +32,69 @@ model_spec <- prophet_reg(
 
 test_that("prophet_reg: prophet, (NO XREGS), Test Model Fit Object", {
 
-    testthat::skip_on_cran()
+    skip_on_cran()
 
     # ** MODEL FIT ----
 
     # Model Fit
     model_fit <- model_spec %>%
-        fit(log(value) ~ date, data = training(splits))
+        fit(log(value) ~ date, data = rsample::training(splits))
 
     # Structure
 
-    testthat::expect_s3_class(model_fit$fit, "prophet_fit_impl")
+    expect_s3_class(model_fit$fit, "prophet_fit_impl")
 
-    testthat::expect_s3_class(model_fit$fit$data, "tbl_df")
+    expect_s3_class(model_fit$fit$data, "tbl_df")
 
-    testthat::expect_equal(names(model_fit$fit$data)[1], "date")
+    expect_equal(names(model_fit$fit$data)[1], "date")
 
-    testthat::expect_true(is.null(model_fit$fit$extras$xreg_recipe))
+    expect_null(model_fit$fit$extras$xreg_recipe)
 
     # $fit PROPHET
 
-    testthat::expect_s3_class(model_fit$fit$models$model_1, "prophet")
+    expect_s3_class(model_fit$fit$models$model_1, "prophet")
 
-    testthat::expect_identical(model_fit$fit$models$model_1$growth, "linear")
-    testthat::expect_identical(model_fit$fit$models$model_1$n.changepoints, 10)
+    expect_identical(model_fit$fit$models$model_1$growth, "linear")
+    expect_identical(model_fit$fit$models$model_1$n.changepoints, 10)
 
-    testthat::expect_identical(model_fit$fit$models$model_1$changepoint.range, 0.75)
-    testthat::expect_identical(model_fit$fit$models$model_1$yearly.seasonality, TRUE)
-    testthat::expect_identical(model_fit$fit$models$model_1$weekly.seasonality, FALSE)
-    testthat::expect_identical(model_fit$fit$models$model_1$daily.seasonality, FALSE)
+    expect_identical(model_fit$fit$models$model_1$changepoint.range, 0.75)
+    expect_identical(model_fit$fit$models$model_1$yearly.seasonality, TRUE)
+    expect_identical(model_fit$fit$models$model_1$weekly.seasonality, FALSE)
+    expect_identical(model_fit$fit$models$model_1$daily.seasonality, FALSE)
 
-    testthat::expect_identical(model_fit$fit$models$model_1$seasonality.mode, 'multiplicative')
-    testthat::expect_identical(model_fit$fit$models$model_1$seasonality.prior.scale, 20)
-    testthat::expect_identical(model_fit$fit$models$model_1$changepoint.prior.scale, 20)
-    testthat::expect_identical(model_fit$fit$models$model_1$holidays.prior.scale, 20)
+    expect_identical(model_fit$fit$models$model_1$seasonality.mode, 'multiplicative')
+    expect_identical(model_fit$fit$models$model_1$seasonality.prior.scale, 20)
+    expect_identical(model_fit$fit$models$model_1$changepoint.prior.scale, 20)
+    expect_identical(model_fit$fit$models$model_1$holidays.prior.scale, 20)
 
 
-    testthat::expect_identical(model_fit$fit$models$model_1$uncertainty.samples, 0)
+    expect_identical(model_fit$fit$models$model_1$uncertainty.samples, 0)
 
     # $preproc
 
-    testthat::expect_equal(model_fit$preproc$y_var, "value")
+    expect_equal(model_fit$preproc$y_var, "value")
 
 
     # ** PREDICTIONS ----
 
     # Predictions
     predictions_tbl <- model_fit %>%
-        modeltime_calibrate(testing(splits)) %>%
-        modeltime_forecast(new_data = testing(splits))
+        modeltime_calibrate(rsample::testing(splits)) %>%
+        modeltime_forecast(new_data = rsample::testing(splits))
 
     # Structure
-    testthat::expect_identical(nrow(testing(splits)), nrow(predictions_tbl))
-    testthat::expect_identical(testing(splits)$date, predictions_tbl$.index)
+    expect_identical(nrow(rsample::testing(splits)), nrow(predictions_tbl))
+    expect_identical(rsample::testing(splits)$date, predictions_tbl$.index)
 
     # Out-of-Sample Accuracy Tests
 
-    resid <- testing(splits)$value - exp(predictions_tbl$.value)
+    resid <- rsample::testing(splits)$value - exp(predictions_tbl$.value)
 
     # - Max Error less than 1500
-    testthat::expect_lte(max(abs(resid)), 1500)
+    expect_lte(max(abs(resid)), 1500)
 
     # - MAE less than 700
-    testthat::expect_lte(mean(abs(resid)), 700)
+    expect_lte(mean(abs(resid)), 700)
 
 })
 
@@ -102,70 +102,70 @@ test_that("prophet_reg: prophet, (NO XREGS), Test Model Fit Object", {
 
 test_that("prophet_reg: prophet, (XREGS), Test Model Fit Object", {
 
-    testthat::skip_on_cran()
+    skip_on_cran()
 
     # ** MODEL FIT ----
 
     # Model Fit
     model_fit <- model_spec %>%
         fit(log(value) ~ date + as.numeric(date) + factor(month(date, label = TRUE), ordered = F),
-            data = training(splits))
+            data = rsample::training(splits))
 
     # Structure
 
-    testthat::expect_s3_class(model_fit$fit, "prophet_fit_impl")
+    expect_s3_class(model_fit$fit, "prophet_fit_impl")
 
-    testthat::expect_s3_class(model_fit$fit$data, "tbl_df")
+    expect_s3_class(model_fit$fit$data, "tbl_df")
 
-    testthat::expect_equal(names(model_fit$fit$data)[1], "date")
+    expect_equal(names(model_fit$fit$data)[1], "date")
 
-    testthat::expect_true(!is.null(model_fit$fit$extras$xreg_recipe))
+    expect_true(!is.null(model_fit$fit$extras$xreg_recipe))
 
     # $fit PROPHET
 
-    testthat::expect_s3_class(model_fit$fit$models$model_1, "prophet")
+    expect_s3_class(model_fit$fit$models$model_1, "prophet")
 
-    testthat::expect_identical(model_fit$fit$models$model_1$growth, "linear")
-    testthat::expect_identical(model_fit$fit$models$model_1$n.changepoints, 10)
+    expect_identical(model_fit$fit$models$model_1$growth, "linear")
+    expect_identical(model_fit$fit$models$model_1$n.changepoints, 10)
 
-    testthat::expect_identical(model_fit$fit$models$model_1$changepoint.range, 0.75)
-    testthat::expect_identical(model_fit$fit$models$model_1$yearly.seasonality, TRUE)
-    testthat::expect_identical(model_fit$fit$models$model_1$weekly.seasonality, FALSE)
-    testthat::expect_identical(model_fit$fit$models$model_1$daily.seasonality, FALSE)
+    expect_identical(model_fit$fit$models$model_1$changepoint.range, 0.75)
+    expect_identical(model_fit$fit$models$model_1$yearly.seasonality, TRUE)
+    expect_identical(model_fit$fit$models$model_1$weekly.seasonality, FALSE)
+    expect_identical(model_fit$fit$models$model_1$daily.seasonality, FALSE)
 
-    testthat::expect_identical(model_fit$fit$models$model_1$seasonality.mode, 'multiplicative')
-    testthat::expect_identical(model_fit$fit$models$model_1$seasonality.prior.scale, 20)
-    testthat::expect_identical(model_fit$fit$models$model_1$changepoint.prior.scale, 20)
-    testthat::expect_identical(model_fit$fit$models$model_1$holidays.prior.scale, 20)
+    expect_identical(model_fit$fit$models$model_1$seasonality.mode, 'multiplicative')
+    expect_identical(model_fit$fit$models$model_1$seasonality.prior.scale, 20)
+    expect_identical(model_fit$fit$models$model_1$changepoint.prior.scale, 20)
+    expect_identical(model_fit$fit$models$model_1$holidays.prior.scale, 20)
 
 
-    testthat::expect_identical(model_fit$fit$models$model_1$uncertainty.samples, 0)
+    expect_identical(model_fit$fit$models$model_1$uncertainty.samples, 0)
 
     # $preproc
 
-    testthat::expect_equal(model_fit$preproc$y_var, "value")
+    expect_equal(model_fit$preproc$y_var, "value")
 
 
     # ** PREDICTIONS ----
 
     # Predictions
     predictions_tbl <- model_fit %>%
-        modeltime_calibrate(testing(splits)) %>%
-        modeltime_forecast(new_data = testing(splits))
+        modeltime_calibrate(rsample::testing(splits)) %>%
+        modeltime_forecast(new_data = rsample::testing(splits))
 
     # Structure
-    testthat::expect_identical(nrow(testing(splits)), nrow(predictions_tbl))
-    testthat::expect_identical(testing(splits)$date, predictions_tbl$.index)
+    expect_identical(nrow(rsample::testing(splits)), nrow(predictions_tbl))
+    expect_identical(rsample::testing(splits)$date, predictions_tbl$.index)
 
     # Out-of-Sample Accuracy Tests
 
-    resid <- testing(splits)$value - exp(predictions_tbl$.value)
+    resid <- rsample::testing(splits)$value - exp(predictions_tbl$.value)
 
     # - Max Error less than 1500
-    testthat::expect_lte(max(abs(resid)), 1500)
+    expect_lte(max(abs(resid)), 1500)
 
     # - MAE less than 700
-    testthat::expect_lte(mean(abs(resid)), 700)
+    expect_lte(mean(abs(resid)), 700)
 
 })
 
@@ -175,84 +175,84 @@ test_that("prophet_reg: prophet, (XREGS), Test Model Fit Object", {
 # TESTS
 test_that("prophet_reg: prophet (workflow), Test Model Fit Object", {
 
-    testthat::skip_on_cran()
+    skip_on_cran()
 
     #
 
     # Recipe spec
-    recipe_spec <- recipe(value ~ date, data = training(splits)) %>%
-        step_log(value, skip = FALSE) %>%
-        step_date(date, features = "month") %>%
-        step_mutate(date_num = as.numeric(date))
+    recipe_spec <- recipes::recipe(value ~ date, data = rsample::training(splits)) %>%
+        recipes::step_log(value, skip = FALSE) %>%
+        recipes::step_date(date, features = "month") %>%
+        recipes::step_mutate(date_num = as.numeric(date))
 
     # Workflow
-    wflw <- workflow() %>%
-        add_recipe(recipe_spec) %>%
-        add_model(model_spec)
+    wflw <- workflows::workflow() %>%
+        workflows::add_recipe(recipe_spec) %>%
+        workflows::add_model(model_spec)
 
     # Fitted Workflow
     wflw_fit <- wflw %>%
-        fit(training(splits))
+        fit(rsample::training(splits))
 
 
     # Structure
 
-    testthat::expect_s3_class(wflw_fit$fit$fit$fit, "prophet_fit_impl")
+    expect_s3_class(wflw_fit$fit$fit$fit, "prophet_fit_impl")
 
-    testthat::expect_s3_class(wflw_fit$fit$fit$fit$data, "tbl_df")
+    expect_s3_class(wflw_fit$fit$fit$fit$data, "tbl_df")
 
-    testthat::expect_equal(names(wflw_fit$fit$fit$fit$data)[1], "date")
+    expect_equal(names(wflw_fit$fit$fit$fit$data)[1], "date")
 
-    testthat::expect_true(!is.null(wflw_fit$fit$fit$fit$extras$xreg_recipe))
+    expect_true(!is.null(wflw_fit$fit$fit$fit$extras$xreg_recipe))
 
     # $fit prophet
 
-    testthat::expect_s3_class(wflw_fit$fit$fit$fit$models$model_1, "prophet")
+    expect_s3_class(wflw_fit$fit$fit$fit$models$model_1, "prophet")
 
-    testthat::expect_identical(wflw_fit$fit$fit$fit$models$model_1$growth, "linear")
-    testthat::expect_identical(wflw_fit$fit$fit$fit$models$model_1$n.changepoints, 10)
+    expect_identical(wflw_fit$fit$fit$fit$models$model_1$growth, "linear")
+    expect_identical(wflw_fit$fit$fit$fit$models$model_1$n.changepoints, 10)
 
-    testthat::expect_identical(wflw_fit$fit$fit$fit$models$model_1$changepoint.range, 0.75)
-    testthat::expect_identical(wflw_fit$fit$fit$fit$models$model_1$yearly.seasonality, TRUE)
-    testthat::expect_identical(wflw_fit$fit$fit$fit$models$model_1$weekly.seasonality, FALSE)
-    testthat::expect_identical(wflw_fit$fit$fit$fit$models$model_1$daily.seasonality, FALSE)
+    expect_identical(wflw_fit$fit$fit$fit$models$model_1$changepoint.range, 0.75)
+    expect_identical(wflw_fit$fit$fit$fit$models$model_1$yearly.seasonality, TRUE)
+    expect_identical(wflw_fit$fit$fit$fit$models$model_1$weekly.seasonality, FALSE)
+    expect_identical(wflw_fit$fit$fit$fit$models$model_1$daily.seasonality, FALSE)
 
-    testthat::expect_identical(wflw_fit$fit$fit$fit$models$model_1$seasonality.mode, 'multiplicative')
-    testthat::expect_identical(wflw_fit$fit$fit$fit$models$model_1$seasonality.prior.scale, 20)
-    testthat::expect_identical(wflw_fit$fit$fit$fit$models$model_1$changepoint.prior.scale, 20)
-    testthat::expect_identical(wflw_fit$fit$fit$fit$models$model_1$holidays.prior.scale, 20)
+    expect_identical(wflw_fit$fit$fit$fit$models$model_1$seasonality.mode, 'multiplicative')
+    expect_identical(wflw_fit$fit$fit$fit$models$model_1$seasonality.prior.scale, 20)
+    expect_identical(wflw_fit$fit$fit$fit$models$model_1$changepoint.prior.scale, 20)
+    expect_identical(wflw_fit$fit$fit$fit$models$model_1$holidays.prior.scale, 20)
 
 
-    testthat::expect_identical(wflw_fit$fit$fit$fit$models$model_1$uncertainty.samples, 0)
+    expect_identical(wflw_fit$fit$fit$fit$models$model_1$uncertainty.samples, 0)
 
     # $preproc
     mld <- wflw_fit %>% workflows::extract_mold()
-    testthat::expect_equal(names(mld$outcomes), "value")
+    expect_equal(names(mld$outcomes), "value")
 
 
     # ** PREDICTIONS ----
 
     # Forecast
     predictions_tbl <- wflw_fit %>%
-        modeltime_calibrate(testing(splits)) %>%
-        modeltime_forecast(new_data = testing(splits), actual_data = training(splits)) %>%
-        mutate_at(vars(.value), exp)
+        modeltime_calibrate(rsample::testing(splits)) %>%
+        modeltime_forecast(new_data = rsample::testing(splits), actual_data = rsample::training(splits)) %>%
+        dplyr::mutate(dplyr::across(.value, exp))
 
-    full_data <- bind_rows(training(splits), testing(splits))
+    full_data <- dplyr::bind_rows(rsample::training(splits), rsample::testing(splits))
 
     # Structure
-    testthat::expect_identical(nrow(full_data), nrow(predictions_tbl))
-    testthat::expect_identical(full_data$date, predictions_tbl$.index)
+    expect_identical(nrow(full_data), nrow(predictions_tbl))
+    expect_identical(full_data$date, predictions_tbl$.index)
 
     # Out-of-Sample Accuracy Tests
-    predictions_tbl <- predictions_tbl %>% filter(.key == "prediction")
-    resid <- testing(splits)$value - predictions_tbl$.value
+    predictions_tbl <- predictions_tbl %>% dplyr::filter(.key == "prediction")
+    resid <- rsample::testing(splits)$value - predictions_tbl$.value
 
     # - Max Error less than 1500
-    testthat::expect_lte(max(abs(resid)), 1500)
+    expect_lte(max(abs(resid)), 1500)
 
     # - MAE less than 700
-    testthat::expect_lte(mean(abs(resid)), 700)
+    expect_lte(mean(abs(resid)), 700)
 
 })
 
@@ -263,7 +263,7 @@ test_that("prophet_reg: prophet (workflow), Test Model Fit Object", {
 
 test_that("prophet_reg: prophet, Logistic Growth", {
 
-    testthat::skip_on_cran()
+    skip_on_cran()
 
     # ** MODEL FIT ----
 
@@ -272,32 +272,32 @@ test_that("prophet_reg: prophet, Logistic Growth", {
         growth = "logistic",
         logistic_cap = 11000
     ) %>%
-        set_engine(engine = "prophet") %>%
+        parsnip::set_engine(engine = "prophet") %>%
         fit(value ~ date, m750)
 
     # Structure
 
-    testthat::expect_s3_class(model_fit$fit, "prophet_fit_impl")
+    expect_s3_class(model_fit$fit, "prophet_fit_impl")
 
-    testthat::expect_s3_class(model_fit$fit$data, "tbl_df")
+    expect_s3_class(model_fit$fit$data, "tbl_df")
 
-    testthat::expect_equal(names(model_fit$fit$data)[1], "date")
+    expect_equal(names(model_fit$fit$data)[1], "date")
 
-    testthat::expect_false(is.null(model_fit$fit$extras$logistic_params$logistic_cap))
+    expect_false(is.null(model_fit$fit$extras$logistic_params$logistic_cap))
 
     # $fit PROPHET
 
-    testthat::expect_s3_class(model_fit$fit$models$model_1, "prophet")
+    expect_s3_class(model_fit$fit$models$model_1, "prophet")
 
-    testthat::expect_identical(model_fit$fit$models$model_1$growth, "logistic")
+    expect_identical(model_fit$fit$models$model_1$growth, "logistic")
 
-    testthat::expect_identical(model_fit$fit$extras$logistic_params$growth, "logistic")
-    testthat::expect_identical(model_fit$fit$extras$logistic_params$logistic_cap, 11000)
-    testthat::expect_true(is.null(model_fit$fit$extras$logistic_params$logistic_floor))
+    expect_identical(model_fit$fit$extras$logistic_params$growth, "logistic")
+    expect_identical(model_fit$fit$extras$logistic_params$logistic_cap, 11000)
+    expect_null(model_fit$fit$extras$logistic_params$logistic_floor)
 
     # $preproc
 
-    testthat::expect_equal(model_fit$preproc$y_var, "value")
+    expect_equal(model_fit$preproc$y_var, "value")
 
 
     # ** PREDICTIONS ----
@@ -321,7 +321,7 @@ test_that("prophet_reg: prophet, Logistic Growth", {
         prophet_reg(
             growth = "logistic"
         ) %>%
-            set_engine(engine = "prophet") %>%
+            parsnip::set_engine(engine = "prophet") %>%
             fit(value ~ date, m750)
     })
 

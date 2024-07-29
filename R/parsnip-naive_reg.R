@@ -93,14 +93,13 @@
 #' These models are univariate. No xregs are used in the modeling process.
 #'
 #'
-#' @seealso [fit.model_spec()], [set_engine()]
+#' @seealso `fit.model_spec()`, `set_engine()`
 #'
 #' @examples
 #' library(dplyr)
 #' library(parsnip)
 #' library(rsample)
 #' library(timetk)
-#' library(modeltime)
 #'
 #' # Data
 #' m750 <- m4_monthly %>% filter(id == "M750")
@@ -270,12 +269,12 @@ naive_fit_impl <- function(x, y, id = NULL, seasonal_period = "auto", ...) {
     if (is_grouped) {
         naive_model <- constructed_tbl %>%
             dplyr::group_by(!! rlang::sym(id)) %>%
-            dplyr::arrange(dplyr::all_of(idx_col)) %>%
+            dplyr::arrange(dplyr::pick(dplyr::all_of(idx_col))) %>%
             dplyr::slice_tail(n = 1) %>%
             dplyr::ungroup()
     } else {
         naive_model <- constructed_tbl %>%
-            dplyr::arrange(dplyr::all_of(idx_col)) %>%
+            dplyr::arrange(dplyr::pick(dplyr::all_of(idx_col))) %>%
             dplyr::slice_tail(n = 1) %>%
             dplyr::ungroup()
     }
@@ -412,12 +411,12 @@ snaive_fit_impl <- function(x, y, id = NULL, seasonal_period = "auto", ...) {
     if (is_grouped) {
         snaive_model <- constructed_tbl %>%
             dplyr::group_by(!! rlang::sym(id)) %>%
-            dplyr::arrange(dplyr::all_of(idx_col)) %>%
+            dplyr::arrange(dplyr::pick(dplyr::all_of(idx_col))) %>%
             dplyr::slice_tail(n = period) %>%
             dplyr::ungroup()
     } else {
         snaive_model <- constructed_tbl %>%
-            dplyr::arrange(dplyr::all_of(idx_col)) %>%
+            dplyr::arrange(dplyr::pick(dplyr::all_of(idx_col))) %>%
             dplyr::slice_tail(n = period) %>%
             dplyr::ungroup()
     }

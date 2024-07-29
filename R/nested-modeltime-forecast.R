@@ -49,7 +49,8 @@
 #' Generally, parallel is better if many forecasts are being generated.
 #'
 #' @export
-modeltime_nested_forecast <- function(object, h = NULL, include_actual = TRUE, conf_interval = 0.95,
+modeltime_nested_forecast <- function(object, h = NULL, include_actual = TRUE,
+                                      conf_interval = 0.95, conf_method = "conformal_default",
                                       id_subset = NULL,
                                       control = control_nested_forecast()) {
 
@@ -64,7 +65,8 @@ modeltime_nested_forecast <- function(object, h = NULL, include_actual = TRUE, c
 }
 
 #' @export
-modeltime_nested_forecast.nested_mdl_time <- function(object, h = NULL, include_actual = TRUE, conf_interval = 0.95,
+modeltime_nested_forecast.nested_mdl_time <- function(object, h = NULL, include_actual = TRUE,
+                                                      conf_interval = 0.95, conf_method = "conformal_default",
                                                       id_subset = NULL,
                                                       control = control_nested_forecast()) {
 
@@ -102,6 +104,7 @@ modeltime_nested_forecast.nested_mdl_time <- function(object, h = NULL, include_
             # new_data       = new_data,
             h              = h,
             conf_interval  = conf_interval,
+            conf_method    = conf_method,
             include_actual = include_actual,
             control        = control
         )
@@ -111,6 +114,7 @@ modeltime_nested_forecast.nested_mdl_time <- function(object, h = NULL, include_
             # new_data       = new_data,
             h              = h,
             conf_interval  = conf_interval,
+            conf_method    = conf_method,
             include_actual = include_actual,
             control        = control
         )
@@ -120,7 +124,7 @@ modeltime_nested_forecast.nested_mdl_time <- function(object, h = NULL, include_
 
 }
 
-modeltime_nested_forecast_sequential <- function(object, h, include_actual, conf_interval,
+modeltime_nested_forecast_sequential <- function(object, h, include_actual, conf_interval, conf_method,
                                                  control) {
 
     t1 <- Sys.time()
@@ -176,7 +180,8 @@ modeltime_nested_forecast_sequential <- function(object, h, include_actual, conf
                                 h             = h,
                                 # new_data      = f,
                                 actual_data   = d,
-                                conf_interval = conf_interval
+                                conf_interval = conf_interval,
+                                conf_method   = conf_method
                             ) %>%
                                 tibble::add_column(!! id_text := id, .before = 1)
 
@@ -241,9 +246,10 @@ modeltime_nested_forecast_sequential <- function(object, h, include_actual, conf
             tidyr::drop_na(.error_desc)
     }
 
-    class(ret) <- c("mdl_forecast_tbl", class(ret))
+    class(ret) <- c("mdl_nested_forecast_tbl", class(ret))
 
     attr(ret, "conf_interval")       <- conf_interval
+    attr(ret, "conf_method")         <- conf_method
     attr(ret, "error_tbl")           <- error_tbl
     attr(ret, "time_elapsed")        <- time_elapsed
 
@@ -256,7 +262,7 @@ modeltime_nested_forecast_sequential <- function(object, h, include_actual, conf
 }
 
 
-modeltime_nested_forecast_parallel <- function(object, h, include_actual, conf_interval,
+modeltime_nested_forecast_parallel <- function(object, h, include_actual, conf_interval, conf_method,
                                                control) {
 
     t1 <- Sys.time()
@@ -326,7 +332,8 @@ modeltime_nested_forecast_parallel <- function(object, h, include_actual, conf_i
                         h             = h,
                         # new_data      = f,
                         actual_data   = d,
-                        conf_interval = conf_interval
+                        conf_interval = conf_interval,
+                        conf_method   = conf_method
                     ) %>%
                         tibble::add_column(!! id_text := id, .before = 1)
 
@@ -383,9 +390,10 @@ modeltime_nested_forecast_parallel <- function(object, h, include_actual, conf_i
 
     ret <- fcast_tbl
 
-    class(ret) <- c("mdl_forecast_tbl", class(ret))
+    class(ret) <- c("mdl_nested_forecast_tbl", class(ret))
 
     attr(ret, "conf_interval")       <- conf_interval
+    attr(ret, "conf_method")         <- conf_method
     attr(ret, "error_tbl")           <- error_tbl
     attr(ret, "time_elapsed")        <- time_elapsed
 
@@ -398,17 +406,20 @@ modeltime_nested_forecast_parallel <- function(object, h, include_actual, conf_i
 }
 
 #' @export
-print.mdl_forecast_tbl <- function(x, ...) {
+print.mdl_nested_forecast_tbl <- function(x, ...) {
 
     # Collect inputs
     fit_col <- attr(x, 'fit_column')
     n_models_with_errors <- attr(x, "error_tbl") %>%
         nrow()
+    conf_interval <- attr(x, 'conf_interval')
+    conf_method   <- attr(x, 'conf_method')
+    if (is.null(conf_method)) {conf_method <- "conformal_default"}
 
-    cat("# Forecast Results\n")
+    cat("# Nested Forecast Results\n")
     cat("  ")
-    cli::cli_text(cli::col_grey("Trained on: {fit_col} | Forecast Errors: [{n_models_with_errors}]"))
+    cli::cli_text(cli::col_grey("Trained on: {fit_col} | Forecast Errors: [{n_models_with_errors}] | Conf Method: {conf_method} | Conf Interval: {conf_interval}"))
     # cli::cli_rule()
-    class(x) <- class(x)[!(class(x) %in% c("mdl_forecast_tbl"))]
+    class(x) <- class(x)[!(class(x) %in% c("mdl_nested_forecast_tbl"))]
     print(x, ...)
 }

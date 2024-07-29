@@ -15,7 +15,7 @@
 #' m750
 #'
 #' @source
-#'  - [M4 Competition Website](https://mofc.unic.ac.cy/m4/)
+#'  - M4 Competition Website: https://www.unic.ac.cy/iff/research/forecasting/m-competitions/m4/
 #'
 "m750"
 
@@ -89,7 +89,6 @@
 #' @details
 #'
 #' ``` {r eval = FALSE}
-#' library(modeltime)
 #' m750_models <- modeltime_table(
 #'     wflw_fit_arima,
 #'     wflw_fit_prophet,
@@ -98,12 +97,7 @@
 #' ```
 #'
 #' @examples
-#' library(modeltime)
-#'
 #' m750_models
-#'
-#'
-#'
 "m750_models"
 
 

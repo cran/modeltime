@@ -160,7 +160,6 @@ library(dplyr)
 library(parsnip)
 library(rsample)
 library(timetk)
-library(modeltime)
 
 # Data
 taylor_30_min
@@ -193,5 +192,5 @@ model_fit
 
 }
 \seealso{
-\code{\link[=fit.model_spec]{fit.model_spec()}}, \code{\link[=set_engine]{set_engine()}}
+\code{fit.model_spec()}, \code{set_engine()}
 }

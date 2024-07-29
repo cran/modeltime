@@ -4,32 +4,32 @@ context("TEST MODELTIME ACCURACY & TABLES")
 # SETUP ----
 
 # Data
-m750   <- m4_monthly %>% filter(id == "M750")
-splits <- initial_time_split(m750, prop = 0.8)
+m750   <- timetk::m4_monthly %>% dplyr::filter(id == "M750")
+splits <- rsample::initial_time_split(m750, prop = 0.8)
 
 
 # ACCURACY ----
 
 test_that("Test Modeltime Accuracy", {
 
-    testthat::skip_on_cran()
+    skip_on_cran()
 
     #
 
     # Model Spec
     model_fit_arima <- arima_reg() %>%
-        set_engine("auto_arima") %>%
-        fit(value ~ date, training(splits))
+        parsnip::set_engine("auto_arima") %>%
+        fit(value ~ date, rsample::training(splits))
 
     model_fit_prophet <- prophet_reg() %>%
-        set_engine("prophet") %>%
-        fit(value ~ date, training(splits))
+        parsnip::set_engine("prophet") %>%
+        fit(value ~ date, rsample::training(splits))
 
     model_fit_lm <- linear_reg() %>%
-        set_engine("lm") %>%
+        parsnip::set_engine("lm") %>%
         fit(value ~ splines::ns(date, df = 5)
-            + month(date, label = TRUE),
-            training(splits))
+            + lubridate::month(date, label = TRUE),
+            rsample::training(splits))
 
     # Model Table
     model_tbl <- modeltime_table(
@@ -39,18 +39,18 @@ test_that("Test Modeltime Accuracy", {
     )
 
     calibration_tbl <- model_tbl %>%
-        modeltime_calibrate(testing(splits))
+        modeltime_calibrate(rsample::testing(splits))
 
     # Test Modeltime Accuracy
 
 
     acc_tbl_1 <- calibration_tbl %>% modeltime_accuracy()
 
-    acc_tbl_2 <- model_tbl %>% modeltime_accuracy(testing(splits))
+    acc_tbl_2 <- model_tbl %>% modeltime_accuracy(rsample::testing(splits))
 
-    acc_tbl_3 <- calibration_tbl %>% modeltime_accuracy(training(splits))
+    acc_tbl_3 <- calibration_tbl %>% modeltime_accuracy(rsample::training(splits))
 
-    acc_tbl_4 <- model_tbl %>% modeltime_accuracy(training(splits))
+    acc_tbl_4 <- model_tbl %>% modeltime_accuracy(rsample::training(splits))
 
     # Structure
     nms_expected <- c(".model_id", ".model_desc", ".type",
@@ -91,7 +91,7 @@ test_that("Test Modeltime Accuracy", {
     # Modifying Default Forecast Accuracy Metric Set
 
     my_metric_set <- default_forecast_accuracy_metric_set(
-        metric_tweak("mase12", yardstick::mase, m = 12)
+        yardstick::metric_tweak("mase12", yardstick::mase, m = 12)
     )
 
     acc_tbl_6 <- calibration_tbl %>%
@@ -124,15 +124,15 @@ test_that("Test Modeltime Accuracy", {
     # accuracy table, GT - Parsnip Interface
 
     # Structure
-    testthat::expect_s3_class(gt_tab, "gt_tbl")
-    testthat::expect_equal(gt_tab$`_heading`$title, "Accuracy Table")
+    expect_s3_class(gt_tab, "gt_tbl")
+    expect_equal(gt_tab$`_heading`$title, "Accuracy Table")
 
 
 
     # accuracy table, Reactable - Parnsip Interface
 
     # Structure
-    testthat::expect_s3_class(react, "reactable")
+    expect_s3_class(react, "reactable")
 
 })
 
@@ -146,7 +146,7 @@ test_that("Test Modeltime Accuracy", {
 
 test_that("accuracy table, GT - Workflow Interface", {
 
-    testthat::skip_on_cran()
+    skip_on_cran()
 
     #
 
@@ -154,22 +154,22 @@ test_that("accuracy table, GT - Workflow Interface", {
 
     # Model Spec
     model_spec <- arima_reg(seasonal_period = 12) %>%
-        set_engine("auto_arima")
+        parsnip::set_engine("auto_arima")
 
     # Recipe spec
-    recipe_spec <- recipe(value ~ date, data = training(splits)) %>%
-        step_log(value, skip = FALSE)
+    recipe_spec <- recipes::recipe(value ~ date, data = rsample::training(splits)) %>%
+        recipes::step_log(value, skip = FALSE)
 
     # Workflow
-    wflw <- workflow() %>%
-        add_recipe(recipe_spec) %>%
-        add_model(model_spec)
+    wflw <- workflows::workflow() %>%
+        workflows::add_recipe(recipe_spec) %>%
+        workflows::add_model(model_spec)
 
     wflw_fit <- wflw %>%
-        fit(training(splits))
+        fit(rsample::training(splits))
 
     accuracy_tbl <- wflw_fit %>%
-        modeltime_calibrate(testing(splits)) %>%
+        modeltime_calibrate(rsample::testing(splits)) %>%
         modeltime_accuracy()
 
     # * Reactable table ----
@@ -183,15 +183,15 @@ test_that("accuracy table, GT - Workflow Interface", {
     # accuracy table, GT - Workflow Interface
 
     # Structure
-    testthat::expect_s3_class(gt_tab, "gt_tbl")
-    testthat::expect_equal(gt_tab$`_heading`$title, "Accuracy Table")
+    expect_s3_class(gt_tab, "gt_tbl")
+    expect_equal(gt_tab$`_heading`$title, "Accuracy Table")
 
 
 
     # accuracy table, Reactable - Workflow Interface
 
     # Structure
-    testthat::expect_s3_class(react, "reactable")
+    expect_s3_class(react, "reactable")
 
 })
 
