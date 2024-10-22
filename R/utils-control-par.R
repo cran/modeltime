@@ -8,6 +8,8 @@
 #'
 #'  - "parallel" - Uses the `parallel` and `doParallel` packages
 #'  - "spark" - Uses the `sparklyr` package
+#' @param .export_vars Environment variables that can be sent to the workers
+#' @param .packages Packages that can be sent to the workers
 #'
 #'
 #' @details
@@ -44,7 +46,8 @@
 
 #' @export
 #' @rdname parallel_start
-parallel_start <- function(..., .method = c("parallel", "spark")) {
+parallel_start <- function(..., .method = c("parallel", "spark"),
+                           .export_vars = NULL, .packages = NULL) {
 
     meth <- tolower(.method[1])
 
@@ -53,15 +56,61 @@ parallel_start <- function(..., .method = c("parallel", "spark")) {
     }
 
     if (meth == "parallel") {
+        # Step 1: Create the cluster
         cl <- parallel::makeCluster(...)
+
+        # Step 2: Register the cluster
         doParallel::registerDoParallel(cl)
-        invisible(
-            parallel::clusterCall(cl, function(x) .libPaths(x), .libPaths())
-        )
+
+        # Step 3: Export variables (if provided)
+        if (!is.null(.export_vars)) {
+            parallel::clusterExport(cl, varlist = .export_vars)
+        }
+
+        # Step 4: Load .packages (if provided)
+        if (!is.null(.packages)) {
+            parallel::clusterCall(cl, function(pkgs) {
+                lapply(pkgs, function(pkg) {
+                    if (!requireNamespace(pkg, quietly = TRUE)) {
+                        stop(paste("Package", pkg, "is not installed."))
+                    }
+                    library(pkg, character.only = TRUE)
+                })
+            }, .packages)
+        }
+
+        # Step 5: Set the library paths for each worker
+        invisible(parallel::clusterCall(cl, function(x) .libPaths(x), .libPaths()))
     }
 
     if (meth == "spark") {
+        # Step 1: Start Sparklyr session
         sparklyr::registerDoSpark(...)
+
+        # Step 2: Export variables and packages to Spark workers using spark_apply (if needed)
+        if (!is.null(.export_vars) || !is.null(.packages)) {
+            # Define a function that loads packages and applies variables
+            spark_apply_function <- function(partition, context) {
+                # Load the packages
+                if (!is.null(context$packages)) {
+                    lapply(context$packages, function(pkg) {
+                        if (!requireNamespace(pkg, quietly = TRUE)) {
+                            stop(paste("Package", pkg, "is not installed."))
+                        }
+                        library(pkg, character.only = TRUE)
+                    })
+                }
+                # Use the exported variables
+                context$export_vars  # Access the variables
+
+                # Example: Return the data (or perform operations using exported variables)
+                partition
+            }
+
+            # Step 3: Broadcast the variables and packages to Spark workers
+            context <- list(export_vars = .export_vars, packages = .packages)
+            sparklyr::spark_apply(sparklyr::spark_session, spark_apply_function, context = context)
+        }
     }
 
 }

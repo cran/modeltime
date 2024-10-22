@@ -196,12 +196,12 @@
 #' @seealso `fit.model_spec()`, `set_engine()`
 #'
 #' @examples
+#' \donttest{
 #' library(dplyr)
 #' library(lubridate)
 #' library(parsnip)
 #' library(rsample)
 #' library(timetk)
-#'
 #'
 #' # Data
 #' m750 <- m4_monthly %>% filter(id == "M750")
@@ -231,13 +231,12 @@
 #'
 #' # FIT ----
 #'
-#' \donttest{
 #' # Boosting - Happens by adding numeric date and month features
-#' model_fit_boosted <- model_spec %>%
-#'     fit(value ~ date + as.numeric(date) + month(date, label = TRUE),
-#'         data = training(splits))
+#' # model_fit_boosted <- model_spec %>%
+#' #     fit(value ~ date + as.numeric(date) + month(date, label = TRUE),
+#' #         data = training(splits))
 #'
-#' model_fit_boosted
+#' # model_fit_boosted
 #' }
 #'
 #'
