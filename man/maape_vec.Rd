@@ -4,17 +4,22 @@
 \alias{maape_vec}
 \title{Mean Arctangent Absolute Percentage Error}
 \usage{
-maape_vec(truth, estimate, na_rm = TRUE, ...)
+maape_vec(truth, estimate, na_rm = TRUE, case_weights = NULL, ...)
 }
 \arguments{
-\item{truth}{The column identifier for the true results (that is numeric).}
+\item{truth}{Numeric vector of ground-truth values.}
 
-\item{estimate}{The column identifier for the predicted results (that is also numeric).}
+\item{estimate}{Numeric vector of predicted values.}
 
-\item{na_rm}{Not in use... \code{NA} values managed by \code{TSrepr::maape()}}
+\item{na_rm}{Logical, whether to remove missing values before computation.}
 
-\item{...}{Not currently in use}
+\item{case_weights}{Optional numeric vector of non-negative case weights (not used by \code{maape_vec}).}
+
+\item{...}{Additional arguments (not used).}
+}
+\value{
+A numeric value representing the Mean Arctangent Absolute Percentage Error.
 }
 \description{
-This is basically a wrapper to the function of \code{TSrepr::maape()}.
+Wrapper around \code{TSrepr::maape()} with yardstick-compatible interface.
 }
