@@ -1,7 +1,7 @@
-571c639c1b096a45fab2972400fa1e76 *DESCRIPTION
+4f265d3104ccaa71f78575ff94b629eb *DESCRIPTION
 55fbacaffa937c2e0b77ccf2330cad32 *LICENSE
 7e3598c8ce22924162228253083dd71e *NAMESPACE
-84e328693c4e21345024333d46c56db6 *NEWS.md
+ce38003f9d49bb10a1e01d3f3b1a2839 *NEWS.md
 3a229fb1aa6db7936312401b04eca208 *R/00_global_variables.R
 f72ee7a1993d887e646af3a6f7a94869 *R/data.R
 fc1763970e04f33bbbe58747fa9883b1 *R/dev-constructor.R
@@ -37,7 +37,7 @@ d852ecabb9b3b1b3f35f929931dfae81 *R/nested-modeltime_extractors.R
 327e3bcddedd85c5eee8e4b7660901c1 *R/nested-modeltime_select_best.R
 e5d0e4be71fd18ffee5aa36e1c8d1f2e *R/parsnip-adam.R
 6fe020f2929751279e3121cb1a39551c *R/parsnip-adam_data.R
-0d267074d32af649a5308473a226a72b *R/parsnip-arima_boost.R
+bf05762b5156d8c7b58c5bcc1509a357 *R/parsnip-arima_boost.R
 f65069074c2fd3ec4a69815471467c1b *R/parsnip-arima_boost_data.R
 fb1ffb3fdbc5228853f190e7957fc60d *R/parsnip-arima_reg.R
 c59dbd54f83549297d59814599b20bdc *R/parsnip-arima_reg_data.R
@@ -47,7 +47,7 @@ d27edcc3d3a421c1c60df5b1d3e83314 *R/parsnip-naive_reg.R
 21c83efa6c5cc2c23ee6f4817ab0a704 *R/parsnip-naive_reg_data.R
 bd0fcba2db0ccce08504d48933d328f9 *R/parsnip-nnetar_reg.R
 af1fce0f515ff778a2844bcb200a52f4 *R/parsnip-nnetar_reg_data.R
-07feeb89acc1f32ffeff033546b7ca28 *R/parsnip-prophet_boost.R
+481521f074345cf992102262939187b9 *R/parsnip-prophet_boost.R
 693dd643238df7810cbda704399803ad *R/parsnip-prophet_boost_data.R
 669ef24e9090e28618672568c814cffd *R/parsnip-prophet_reg.R
 068e5f2f796e7bb9b83c4328db944e4c *R/parsnip-prophet_reg_data.R
@@ -60,7 +60,7 @@ d56cddcc22d8c57e6a5ff8682fca5c7b *R/parsnip-temporal_hierarchy.R
 73326617273d5b3da1daf95bb462b0c0 *R/tibble-type_sum.R
 01d952ec00af2d06870c3c7eb0eb686a *R/utils-calc-accuracy.R
 9c6a6493dc7c395a4f5793a39c513651 *R/utils-checks-validations.R
-8938fc26dee1804653d109030d4ef5ba *R/utils-control-par.R
+9e8b403a3105c5555c8e613cdb05b3a0 *R/utils-control-par.R
 660d58f4551478f750e6185cab1f7c5d *R/utils-is_modeltime.R
 65594f6a6970b47179f8273e061ebc49 *R/utils-make_grouped_predictions.R
 29ae5f3eba5660e9d89f08b2aa4fa093 *R/utils-parsnip-helpers.R
@@ -77,7 +77,7 @@ ab8bb8f77ce4575d1c77e5f3e4a15705 *data/m750_splits.rda
 cce428ae5150fe6bb2e93de9b811148d *data/m750_training_resamples.rda
 97877e97437f1fd1a032eb87d4d133e2 *inst/doc/getting-started-with-modeltime.R
 7e1b7dbab6e646dee8d9494fe21723b3 *inst/doc/getting-started-with-modeltime.Rmd
-de9edeb92b619e58e9edcf89f7fb5328 *inst/doc/getting-started-with-modeltime.html
+51430715ea33647f99d58fab52b2a054 *inst/doc/getting-started-with-modeltime.html
 0281ed473788f67492bf97bcbc728ace *man/Adam_predict_impl.Rd
 6a4cddd6d5bb4355d06c6ad557c0f3c7 *man/Arima_fit_impl.Rd
 59e446b463e94c5768b0598a701f7d41 *man/Arima_predict_impl.Rd
@@ -89,7 +89,7 @@ e15ac538dfa150cf02c5128d3bba0b5c *man/adam_params.Rd
 b7da6a52d5d78c753ffcd76264ebc2c3 *man/arima_boost.Rd
 36e74aeeceaa12b6da352dc3a159fd62 *man/arima_params.Rd
 3affc6200fab19f8fce86ed2c4d4bf48 *man/arima_reg.Rd
-15fad31d814dd23a9f4b70bdd90732cb *man/arima_xgboost_fit_impl.Rd
+5c15e9b655d3f92cf61dd156815cfe7e *man/arima_xgboost_fit_impl.Rd
 4ab912617cfc3742d884769a94f38844 *man/arima_xgboost_predict_impl.Rd
 6caacb95cc804d808c15d1f02643439b *man/auto_adam_fit_impl.Rd
 826f1326c2bbe0d23cc92f89703d1b1d *man/auto_arima_fit_impl.Rd
@@ -158,7 +158,7 @@ e59dbc37b7143be9432b9bdf032bb739 *man/nnetar_reg.Rd
 5ca64fba0d45f7fc9fd9810dec50b63b *man/plot_modeltime_residuals.Rd
 9a5a02f146dae505f1481e0e5062f747 *man/pluck_modeltime_model.Rd
 0a59e3d9975485d7b79088e527844bc0 *man/prep_nested.Rd
-ff36bb771448043939c6e8cdd624d47e *man/prophet_boost.Rd
+acb1c3aee9f9f543b0b161516f2505b0 *man/prophet_boost.Rd
 3d3e26e6f094f0656558d5b5a2d36231 *man/prophet_fit_impl.Rd
 3f91780da935721b0e9beaf33da603e1 *man/prophet_params.Rd
 c7f9cfa3aec117ee0ec1475015492f0a *man/prophet_predict_impl.Rd
@@ -228,10 +228,11 @@ e40ba69b47f0cd78390cd47b264ed7b9 *tests/testthat/test-modeltime_table-forecast-a
 5f3e5e98ce6370c8e94722f6e5ce480e *tests/testthat/test-modeltime_table-no-calib-refit.R
 29205f44415cc262b4958940085eb136 *tests/testthat/test-nested-modeltime.R
 4b4251c0bdabd989fada1b54617d2046 *tests/testthat/test-panel-data.R
+f6eb52f80b8755fc2a4b7d0ea6c1302b *tests/testthat/test-parallel-start-stop.R
 f6de33c0daa81b1a303f9459ad817bb4 *tests/testthat/test-recursive-chunk-uneven.R
 5c0dcb4d4bfaa5fd25758f683b437555 *tests/testthat/test-recursive-chunk.R
 374fcb72ba78564409b73950e13ee4cf *tests/testthat/test-recursive.R
-4bb05436091bbbe2b373965ad57c4819 *tests/testthat/test-refit-parallel.R
+e6320ba6db0dd3420fb8d922639e2659 *tests/testthat/test-refit-parallel.R
 86b3cb20516141be68f9e3b53cdbff30 *tests/testthat/test-results-accuracy-tables.R
 16a41fb711d5211e95c66d5517536401 *tests/testthat/test-results-forecast-plots.R
 b18898f91b8a474257d0bf3c5d9d612d *tests/testthat/test-results-residuals-tests.R
